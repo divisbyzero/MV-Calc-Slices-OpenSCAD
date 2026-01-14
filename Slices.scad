@@ -9,7 +9,10 @@
 //////////////////// USER PARAMETERS //////////////////////////
 MODE = "slice";          // "slice" | "stand" | "both"
 
-length     = 120;        // mm, corresponds to y-interval size
+slice_axis = "y";        // "x" => x=constant slices (vary y)
+                         // "y" => y=constant slices (vary x)
+
+length     = 120;        // mm, corresponds to interval size along the slice direction
 
 xmin       = -2;          // math x-min
 ymin       = -2;          // math y-min
@@ -17,7 +20,7 @@ x_span     = 4;          // math width in x-direction
 y_span     = 4;          // math width in y-direction
 
 numslices  = 7;          // number of x-traces
-k          = 1;          // 1..numslices
+k          = 7;          // 1..numslices
 
 slice_thickness = 3.0;   // mm (SAME for slice and stand)
 clearance       = 0.25;  // mm (fit tolerance)
@@ -56,10 +59,18 @@ function clamp(v, lo, hi) = (v<lo)?lo : (v>hi)?hi : v;
 // Map y_mm in [0,length] to y_math in [ymin, ymin+y_span]
 function y_math_from_mm(y_mm) = lerp(ymin, ymin + y_span, y_mm/length);
 
+// Map x_mm in [0,length] to x_math in [xmin, xmin+x_span]
+function x_math_from_mm(x_mm) = lerp(xmin, xmin + x_span, x_mm/length);
+
 // Evenly spaced x_k in [xmin, xmin+x_span]
 function xk_from_k(k_) =
     (numslices<=1) ? xmin :
     lerp(xmin, xmin + x_span, (k_-1)/(numslices-1));
+
+// Evenly spaced y_k in [ymin, ymin+y_span]
+function yk_from_k(k_) =
+    (numslices<=1) ? ymin :
+    lerp(ymin, ymin + y_span, (k_-1)/(numslices-1));
 
 // Convert f(x,y) to printable z(mm), clamped
 function z_mm(xm, ym) = max(z_floor, z_offset + z_scale * f(xm, ym));
@@ -71,13 +82,15 @@ function reverse_list(v) = [ for (i = [len(v)-1 : -1 : 0]) v[i] ];
 // Slice: 2D outline in (Y,Z), extruded in X by slice_thickness
 module slice2D_outline(k_=k) {
     xk = xk_from_k(k_);
+    yk = yk_from_k(k_);
 
     top = [
         for (i=[0:n_samples])
-            let(y_mm = length * i / n_samples,
-                ym   = y_math_from_mm(y_mm),
-                z    = z_mm(xk, ym))
-            [y_mm, z]
+            let(s_mm = length * i / n_samples,
+                xm   = x_math_from_mm(s_mm),
+                ym   = y_math_from_mm(s_mm),
+                z    = (slice_axis=="x") ? z_mm(xk, ym) : z_mm(xm, yk))
+            [s_mm, z]
     ];
 
     bottom_left  = [0, 0];
@@ -91,12 +104,14 @@ module slice3D(k_=k) {
     // If we place a slot beyond the last nonzero profile point, it won't appear.
     // So compute an effective length for slot placement based on the sampled curve.
     xk = xk_from_k(k_);
+    yk = yk_from_k(k_);
     eps = 0.001;
     nonzero_idx = [
         for (i=[0:n_samples])
-            let(y_mm = length * i / n_samples,
-                ym   = y_math_from_mm(y_mm),
-                z    = z_mm(xk, ym))
+            let(s_mm = length * i / n_samples,
+                xm   = x_math_from_mm(s_mm),
+                ym   = y_math_from_mm(s_mm),
+                z    = (slice_axis=="x") ? z_mm(xk, ym) : z_mm(xm, yk))
             if (z > z_floor + eps) i
     ];
     slot_ref_len = (len(nonzero_idx) == 0) ? length : (length * max(nonzero_idx) / n_samples);
