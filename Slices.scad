@@ -7,17 +7,17 @@
 ///////////////////////////////////////////////////////////////
 
 //////////////////// USER PARAMETERS //////////////////////////
-MODE = "stand";          // "slice" | "stand" | "both"
+MODE = "slice";          // "slice" | "stand" | "both"
 
 length     = 120;        // mm, corresponds to y-interval size
 
-xmin       = 0;          // math x-min
-ymin       = 0;          // math y-min
+xmin       = -2;          // math x-min
+ymin       = -2;          // math y-min
 x_span     = 4;          // math width in x-direction
 y_span     = 4;          // math width in y-direction
 
 numslices  = 7;          // number of x-traces
-k          = 4;          // 1..numslices
+k          = 1;          // 1..numslices
 
 slice_thickness = 3.0;   // mm (SAME for slice and stand)
 clearance       = 0.25;  // mm (fit tolerance)
@@ -38,14 +38,15 @@ slot_opening_w = slice_thickness + clearance;
 // Slots are located at 1/4 and 3/4 of the slice length
 slot_positions = [0.25, 0.75];
 
-// Stand sizing (as before, but thickness now equals slice_thickness)
-stand_height  = 2*slot_opening_w;  // you originally wanted 2*width; here width=slot_opening_w
+// Stand sizing
+// Height is 2*slot_h; slots cut down from the top by slot_h.
+stand_height  = 2*slot_h;
 stand_margin  = 6;                 // mm extra length beyond `length` on both ends
 stand_N       = numslices;         // positions
 
 ///////////////////////////////////////////////////////////////
 // DEFINE YOUR FUNCTION HERE
-function f(x,y) = x*x - y*y+10;
+function f(x,y) = x*x - y*y+5;
 
 ///////////////////////////////////////////////////////////////
 // Helpers
@@ -120,9 +121,7 @@ module slice3D(k_=k) {
 
 ///////////////////////////////////////////////////////////////
 // Stand: same thickness as slice (slice_thickness)
-// We create a base block and TWO KEYS per position.
-// Keys have thickness slice_thickness and width slot_opening_w, so they
-// fit into the slice notches with clearance.
+// Stand is a solid block with slots removed (i.e., the inverse of the old key comb).
 module stand3D() {
     stand_len = length + 2*stand_margin;
 
@@ -131,25 +130,20 @@ module stand3D() {
         (stand_N<=1) ? (stand_len/2) :
         stand_margin + (stand_len - 2*stand_margin) * (i/(stand_N-1));
 
-    union() {
-        // Base block: thickness=X=slice_thickness
-        translate([0, -stand_margin, 0])
+    // Shift so the central usable span corresponds to y in [0, length].
+    translate([0, -stand_margin, 0])
+        difference() {
+            // Base block spans y in [-stand_margin, length+stand_margin].
             cube([ slice_thickness, stand_len, stand_height ], center=false);
 
-        // Keys: two per position, aligned to the slice notch spacing
-        for (i=[0:stand_N-1]) {
-            y0 = posY(i);
-
-            // Put first key at y0, second key offset by (0.75-0.25)*length = 0.5*length
-            key1_center = y0;
-            key2_center = y0 + (slot_positions[1] - slot_positions[0]) * length;
-
-            for (yc = [key1_center, key2_center]) {
-                translate([0, yc - slot_opening_w/2, stand_height])
-                    cube([ slice_thickness, slot_opening_w, slot_h ], center=false);
+            // Slots: cut down from the top by slot_h.
+            // Slot opening (mating) = slot_opening_w.
+            for (i=[0:stand_N-1]) {
+                yc = posY(i);
+                translate([-1, yc - slot_opening_w/2, stand_height - slot_h])
+                    cube([ slice_thickness + 2, slot_opening_w, slot_h + 1 ], center=false);
             }
         }
-    }
 }
 
 ///////////////////////////////////////////////////////////////
