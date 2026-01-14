@@ -7,7 +7,7 @@
 ///////////////////////////////////////////////////////////////
 
 //////////////////// USER PARAMETERS //////////////////////////
-MODE = "slice";          // "slice" | "stand" | "both"
+MODE = "stand";          // "slice" | "stand" | "both"
 
 length     = 120;        // mm, corresponds to y-interval size
 
@@ -45,7 +45,7 @@ stand_N       = numslices;         // positions
 
 ///////////////////////////////////////////////////////////////
 // DEFINE YOUR FUNCTION HERE
-function f(x,y) = x*x - y*y;
+function f(x,y) = x*x - y*y+10;
 
 ///////////////////////////////////////////////////////////////
 // Helpers
@@ -86,6 +86,20 @@ module slice2D_outline(k_=k) {
 }
 
 module slice3D(k_=k) {
+    // Some parameter combos clamp the profile to z_floor before reaching `length`.
+    // If we place a slot beyond the last nonzero profile point, it won't appear.
+    // So compute an effective length for slot placement based on the sampled curve.
+    xk = xk_from_k(k_);
+    eps = 0.001;
+    nonzero_idx = [
+        for (i=[0:n_samples])
+            let(y_mm = length * i / n_samples,
+                ym   = y_math_from_mm(y_mm),
+                z    = z_mm(xk, ym))
+            if (z > z_floor + eps) i
+    ];
+    slot_ref_len = (len(nonzero_idx) == 0) ? length : (length * max(nonzero_idx) / n_samples);
+
     difference() {
         linear_extrude(height = slice_thickness, center=false, convexity=10)
             slice2D_outline(k_);
@@ -98,7 +112,7 @@ module slice3D(k_=k) {
             //   Y = vertical height (0..z)
             // and the slice thickness is extruded along Z.
             // So the notch should be positioned along X, rise in Y, and cut through Z.
-            translate([ p*length - slot_opening_w/2, -1, -1 ]) // -1 ensures full cut
+            translate([ p*slot_ref_len - slot_opening_w/2, -1, -1 ]) // -1 ensures full cut
                 cube([ slot_opening_w, slot_h + 1, slice_thickness + 2 ], center=false);
         }
     }
