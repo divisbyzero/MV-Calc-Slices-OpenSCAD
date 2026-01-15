@@ -9,7 +9,12 @@
 //////////////////// USER PARAMETERS //////////////////////////
 
 ///////////////////////////////////////////////////////////////
-MODE = "stand_x";        // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "solid"
+MODE = "slice_y";        // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "solid"
+                         // "slice_x" produces a slice in which x=constant
+                         // "slice_y" produces a slice in which y=constant
+                         // "stand_x" produces a stand for slice_x
+                         // "stand_y" produces a stand for slice_y
+                         // "solid" produces the full 3D surface solid
 
 //////
 // Function definition and parameters
@@ -41,7 +46,7 @@ clearance       = 0.25;  // mm — fit tolerance
 //////
 // Physical size of the final object
 x_length   = 100;        // mm
-y_length   = 200;        // mm
+y_length   = 100;        // mm
 
 // Vertical scaling/offset: z_mm = z_offset + z_scale * f(x,y)
 z_scale    = 10;         // mm per math-unit
@@ -73,10 +78,10 @@ function lerp(a,b,t) = a + (b-a)*t;
 function clamp(v, lo, hi) = (v<lo)?lo : (v>hi)?hi : v;
 
 // Length of the generated slice in mm.
-// Here, `vary_axis` means which physical axis varies along the slice length.
-// - vary_axis == "x" => slice runs along X (0..x_length)
-// - vary_axis == "y" => slice runs along Y (0..y_length)
-function slice_length_mm(vary_axis) = (vary_axis=="x") ? x_length : y_length;
+// Here, `const_axis` means which math/physical axis is held constant for the slice:
+// - const_axis == "x" => x is constant, y varies => slice length uses y_length
+// - const_axis == "y" => y is constant, x varies => slice length uses x_length
+function slice_length_mm(const_axis) = (const_axis=="x") ? y_length : x_length;
 
 // Map y_mm in [0,y_length] to y_math in [ymin, ymin+y_span]
 function y_math_from_mm(y_mm) = lerp(ymin, ymin + y_span, y_mm/y_length);
@@ -191,18 +196,18 @@ module solid3D(nx=solid_nx, ny=solid_ny) {
 ///////////////////////////////////////////////////////////////
 // Slice: 2D outline in (S,Z) where S is distance along the slice.
 // Extruded by slice_thickness.
-// vary_axis == "x" => y is constant (y = yk), x varies along the slice
-// vary_axis == "y" => x is constant (x = xk), y varies along the slice
-module slice2D_outline(k_=k, vary_axis) {
+// const_axis == "x" => x is constant (x = xk), y varies along the slice
+// const_axis == "y" => y is constant (y = yk), x varies along the slice
+module slice2D_outline(k_=k, const_axis) {
     xk = xk_from_k(k_);
     yk = yk_from_k(k_);
-    slice_len = slice_length_mm(vary_axis);
+    slice_len = slice_length_mm(const_axis);
 
     top = [
         for (i=[0:n_samples])
             let(s_mm = slice_len * i / n_samples,
-                xm   = (vary_axis=="x") ? x_math_from_mm(s_mm) : xk,
-                ym   = (vary_axis=="y") ? y_math_from_mm(s_mm) : yk,
+                xm   = (const_axis=="x") ? xk : x_math_from_mm(s_mm),
+                ym   = (const_axis=="x") ? y_math_from_mm(s_mm) : yk,
                 z    = z_mm(xm, ym))
             [s_mm, z]
     ];
@@ -213,19 +218,19 @@ module slice2D_outline(k_=k, vary_axis) {
     polygon(points = concat([bottom_left, bottom_right], reverse_list(top)));
 }
 
-module slice3D(k_=k, vary_axis) {
+module slice3D(k_=k, const_axis) {
     // Some parameter combos clamp the profile to z_floor before reaching the slice end.
     // If we place a slot beyond the last nonzero profile point, it won't appear.
     // So compute an effective length for slot placement based on the sampled curve.
     xk = xk_from_k(k_);
     yk = yk_from_k(k_);
-    slice_len = slice_length_mm(vary_axis);
+    slice_len = slice_length_mm(const_axis);
     eps = 0.001;
     nonzero_idx = [
         for (i=[0:n_samples])
             let(s_mm = slice_len * i / n_samples,
-                xm   = (vary_axis=="x") ? x_math_from_mm(s_mm) : xk,
-                ym   = (vary_axis=="y") ? y_math_from_mm(s_mm) : yk,
+                xm   = (const_axis=="x") ? xk : x_math_from_mm(s_mm),
+                ym   = (const_axis=="x") ? y_math_from_mm(s_mm) : yk,
                 z    = z_mm(xm, ym))
             if (z > z_floor + eps) i
     ];
@@ -233,7 +238,7 @@ module slice3D(k_=k, vary_axis) {
 
     difference() {
         linear_extrude(height = slice_thickness, center=false, convexity=10)
-            slice2D_outline(k_, vary_axis);
+            slice2D_outline(k_, const_axis);
 
         // Two bottom slots (notches): opening width = slot_opening_w,
         // height = slot_h, centered at 1/4 and 3/4 of the length.
@@ -252,11 +257,11 @@ module slice3D(k_=k, vary_axis) {
 ///////////////////////////////////////////////////////////////
 // Stand: same thickness as slice (slice_thickness)
 // Stand is a solid block with slots removed (i.e., the inverse of the old key comb).
-module stand3D_for(vary_axis) {
-    // vary_axis must match the corresponding slice mode.
-    // - stand_x goes with slice_x  => vary_axis = "x" => length uses x_length
-    // - stand_y goes with slice_y  => vary_axis = "y" => length uses y_length
-    stand_len = slice_length_mm(vary_axis) + 2*stand_margin;
+module stand3D_for(const_axis) {
+    // const_axis must match the corresponding slice mode.
+    // - stand_x goes with slice_x  => const_axis = "x" => length uses y_length
+    // - stand_y goes with slice_y  => const_axis = "y" => length uses x_length
+    stand_len = slice_length_mm(const_axis) + 2*stand_margin;
 
     function posY(i) =
         (stand_N<=1) ? (stand_len/2) :
