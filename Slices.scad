@@ -7,49 +7,59 @@
 ///////////////////////////////////////////////////////////////
 
 //////////////////// USER PARAMETERS //////////////////////////
+
+///////////////////////////////////////////////////////////////
 MODE = "slice";          // "slice" | "stand" | "both"
 
-slice_axis = "y";        // "x" => x=constant slices (vary y)
-                         // "y" => y=constant slices (vary x)
-
-length     = 120;        // mm, corresponds to interval size along the slice direction
-
+//////
+// Function definition and parameters
+//////
+function f(x,y) = x*x - y*y+5;
+// Domain: [xmin,xmin+x_span] x [ymin,ymin+y_span]
 xmin       = -2;          // math x-min
 ymin       = -2;          // math y-min
 x_span     = 4;          // math width in x-direction
 y_span     = 4;          // math width in y-direction
-
-numslices  = 7;          // number of x-traces
-k          = 7;          // 1..numslices
-
-slice_thickness = 3.0;   // mm (SAME for slice and stand)
-clearance       = 0.25;  // mm (fit tolerance)
-
-slot_h     = 20;          // mm (height of the slice notch / stand key)
-
 n_samples  = 180;        // curve sampling resolution
+
+//////
+// Slice parameters
+//////
+slice_axis = "y";        // "x" => x=constant slices
+                         // "y" => y=constant slices
+numslices  = 7;          // number of traces
+k          = 7;          // slice number to generate: 1...numslices
+slice_thickness = 3.0;   // mm 
+clearance       = 0.25;  // mm — fit tolerance
+
+//////
+// Size parameters
+//////
+length     = 120;        // mm, corresponds to interval size along the slice direction
 
 // Vertical scaling/offset: z_mm = z_offset + z_scale * f(x,y)
 z_scale    = 15;         // mm per math-unit
 z_offset   = 12;         // mm
 z_floor    = 0;          // mm (clamp below)
 
-//////////////////// DERIVED PARAMETERS ///////////////////////
+//////
+// Slot parameters
+//////
+// Slots are located at 1/4 and 3/4 of the slice length
+slot_h     = 20;          // mm — height of the slice notch
+slot_positions = [0.25, 0.75];
+
 // Slot opening (in the mating direction) = slice thickness + clearance
 slot_opening_w = slice_thickness + clearance;
 
-// Slots are located at 1/4 and 3/4 of the slice length
-slot_positions = [0.25, 0.75];
-
-// Stand sizing
+//////
+// Stand parameters
+//////
 // Height is 2*slot_h; slots cut down from the top by slot_h.
 stand_height  = 2*slot_h;
 stand_margin  = 6;                 // mm extra length beyond `length` on both ends
 stand_N       = numslices;         // positions
 
-///////////////////////////////////////////////////////////////
-// DEFINE YOUR FUNCTION HERE
-function f(x,y) = x*x - y*y+5;
 
 ///////////////////////////////////////////////////////////////
 // Helpers
