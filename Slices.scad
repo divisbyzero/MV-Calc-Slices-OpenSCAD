@@ -179,12 +179,14 @@ module stand3D() {
             }
     }
 
-    // Print-friendly orientation: lay the stand flat on the XY plane.
-    // This keeps the geometry identical, but rotates it so Z height = slice_thickness.
-    // (No Z lift here: the rotated solid already spans z=0..slice_thickness.)
-    translate([0, stand_margin, 0])
-        rotate([0, -90, 0])
-            stand_upright();
+    // Print-friendly orientation:
+    // - Flat on XY plane with thickness in +Z (0..slice_thickness)
+    // - Sits on x-axis (y=0..stand_height)
+    // - Long axis along +X (x=0..slice_length_mm()+2*stand_margin)
+    translate([stand_margin, 0, 0])
+        rotate([-90, 0, 0])
+            rotate([0, 0, -90])
+                stand_upright();
 }
 
 ///////////////////////////////////////////////////////////////
