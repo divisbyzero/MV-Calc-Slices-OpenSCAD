@@ -9,7 +9,7 @@
 //////////////////// USER PARAMETERS //////////////////////////
 
 ///////////////////////////////////////////////////////////////
-MODE = "slice_y";        // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "solid"
+MODE = "slice_x";        // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "solid"
                          // "slice_x" produces a slice in which x=constant
                          // "slice_y" produces a slice in which y=constant
                          // "stand_x" produces a stand for slice_x
@@ -37,7 +37,7 @@ solid_ny   = 120;        // surface sampling in Y (higher = smoother, slower)
 // Slice parameters
 //////
 numslices  = 7;          // number of traces
-k          = 4;          // slice number to generate: 1...numslices
+k          = 1;          // slice number to generate: 1...numslices
 slice_thickness = 3.0;   // mm 
 clearance       = 0.25;  // mm — fit tolerance
 
