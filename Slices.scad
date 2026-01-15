@@ -9,15 +9,15 @@
 //////////////////// USER PARAMETERS //////////////////////////
 
 ///////////////////////////////////////////////////////////////
-MODE = "slice";          // "slice" | "stand" | "both"
+MODE = "stand";          // "slice" | "stand" | "both"
 
 //////
 // Function definition and parameters
 //////
 function f(x,y) = x*x - y*y+5;
 // Domain: [xmin,xmin+x_span] x [ymin,ymin+y_span]
-xmin       = -2;          // math x-min
-ymin       = -2;          // math y-min
+xmin       = -2;         // math x-min
+ymin       = -2;         // math y-min
 x_span     = 4;          // math width in x-direction
 y_span     = 4;          // math width in y-direction
 n_samples  = 180;        // curve sampling resolution
@@ -162,20 +162,29 @@ module stand3D() {
         (stand_N<=1) ? (stand_len/2) :
         stand_margin + (stand_len - 2*stand_margin) * (i/(stand_N-1));
 
-    // Shift so the central usable span corresponds to y in [0, slice_length_mm()].
-    translate([0, -stand_margin, 0])
-        difference() {
-            // Base block spans y in [-stand_margin, slice_length_mm()+stand_margin].
-            cube([ slice_thickness, stand_len, stand_height ], center=false);
+    module stand_upright() {
+        // Shift so the central usable span corresponds to y in [0, slice_length_mm()].
+        translate([0, -stand_margin, 0])
+            difference() {
+                // Base block spans y in [-stand_margin, slice_length_mm()+stand_margin].
+                cube([ slice_thickness, stand_len, stand_height ], center=false);
 
-            // Slots: cut down from the top by slot_h.
-            // Slot opening (mating) = slot_opening_w.
-            for (i=[0:stand_N-1]) {
-                yc = posY(i);
-                translate([-1, yc - slot_opening_w/2, stand_height - slot_h])
-                    cube([ slice_thickness + 2, slot_opening_w, slot_h + 1 ], center=false);
+                // Slots: cut down from the top by slot_h.
+                // Slot opening (mating) = slot_opening_w.
+                for (i=[0:stand_N-1]) {
+                    yc = posY(i);
+                    translate([-1, yc - slot_opening_w/2, stand_height - slot_h])
+                        cube([ slice_thickness + 2, slot_opening_w, slot_h + 1 ], center=false);
+                }
             }
-        }
+    }
+
+    // Print-friendly orientation: lay the stand flat on the XY plane.
+    // This keeps the geometry identical, but rotates it so Z height = slice_thickness.
+    // (No Z lift here: the rotated solid already spans z=0..slice_thickness.)
+    translate([0, stand_margin, 0])
+        rotate([0, -90, 0])
+            stand_upright();
 }
 
 ///////////////////////////////////////////////////////////////
@@ -186,7 +195,8 @@ if (MODE=="slice") {
     stand3D();
 } else if (MODE=="both") {
     stand3D();
-    translate([0, 0, stand_height + slot_h + 2])
+    // Offset slice so it doesn't overlap the (flattened) stand preview.
+    translate([stand_height + 5, 0, 0])
         slice3D(k);
 } else {
     echo("Unknown MODE. Use: slice | stand | both");
