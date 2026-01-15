@@ -9,7 +9,7 @@
 //////////////////// USER PARAMETERS //////////////////////////
 
 ///////////////////////////////////////////////////////////////
-MODE = "stand";          // "slice" | "stand" | "both"
+MODE = "stand";          // "slice" | "stand"
 
 //////
 // Function definition and parameters
@@ -25,7 +25,7 @@ n_samples  = 180;        // curve sampling resolution
 //////
 // Slice parameters
 //////
-slice_axis = "y";        // "x" => x=constant slices
+slice_axis = "x";        // "x" => x=constant slices
                          // "y" => y=constant slices
 numslices  = 7;          // number of traces
 k          = 4;          // slice number to generate: 1...numslices
@@ -193,11 +193,6 @@ if (MODE=="slice") {
     slice3D(k);
 } else if (MODE=="stand") {
     stand3D();
-} else if (MODE=="both") {
-    stand3D();
-    // Offset slice so it doesn't overlap the (flattened) stand preview.
-    translate([stand_height + 5, 0, 0])
-        slice3D(k);
 } else {
-    echo("Unknown MODE. Use: slice | stand | both");
+    echo("Unknown MODE. Use: slice | stand");
 }
