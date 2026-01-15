@@ -9,8 +9,7 @@
 //////////////////// USER PARAMETERS //////////////////////////
 
 ///////////////////////////////////////////////////////////////
-MODE = "solid
-";        // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "solid"
+MODE = "solid";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "solid"
                          // "slice_x" produces a slice in which x=constant
                          // "slice_y" produces a slice in which y=constant
                          // "stand_x" produces a stand for slice_x
@@ -21,12 +20,16 @@ MODE = "solid
 // Function definition and parameters
 //////
 // Note: sin_rad, cos_rad, tan_rad are trig functions that accept radians
-function f(x,y) = x*x - y*y;
+//function f(x,y) = x*x - y*y;
+function f(x,y) =
+    let(r = sqrt(x*x + y*y))
+    (r == 0) ? 2 : 2*sin_rad(r)/r;
+
 // Domain: [xmin,xmin+x_span] x [ymin,ymin+y_span]
-xmin       = -2;         // math x-min
-ymin       = -2;         // math y-min
-x_span     = 4;          // math width in x-direction
-y_span     = 4;          // math width in y-direction
+xmin       = -10;         // math x-min
+ymin       = -10;         // math y-min
+x_span     = 20;          // math width in x-direction
+y_span     = 20;          // math width in y-direction
 n_samples  = 180;        // curve sampling resolution
 
 //////
@@ -38,8 +41,8 @@ solid_ny   = 120;        // surface sampling in Y (higher = smoother, slower)
 //////
 // Slice parameters
 //////
-numslices  = 7;          // number of traces
-k          = 1;          // slice number to generate: 1...numslices
+numslices  = 11;          // number of traces
+k          = 6;          // slice number to generate: 1...numslices
 slice_thickness = 3.0;   // mm 
 clearance       = 0.25;  // mm — fit tolerance
 
