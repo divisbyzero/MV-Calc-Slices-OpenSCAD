@@ -9,7 +9,8 @@
 //////////////////// USER PARAMETERS //////////////////////////
 
 ///////////////////////////////////////////////////////////////
-MODE = "slice_x";        // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "solid"
+MODE = "solid
+";        // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "solid"
                          // "slice_x" produces a slice in which x=constant
                          // "slice_y" produces a slice in which y=constant
                          // "stand_x" produces a stand for slice_x
@@ -19,7 +20,8 @@ MODE = "slice_x";        // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "sol
 //////
 // Function definition and parameters
 //////
-function f(x,y) = x*x - y*y+5;
+// Note: sin_rad, cos_rad, tan_rad are trig functions that accept radians
+function f(x,y) = x*x - y*y;
 // Domain: [xmin,xmin+x_span] x [ymin,ymin+y_span]
 xmin       = -2;         // math x-min
 ymin       = -2;         // math y-min
@@ -48,10 +50,16 @@ clearance       = 0.25;  // mm — fit tolerance
 x_length   = 100;        // mm
 y_length   = 100;        // mm
 
-// Vertical scaling/offset: z_mm = z_offset + z_scale * f(x,y)
+// Vertical scaling:
+// 1) z_scale * f(x,y) is the function value in mm
+// 2) z_min is the minimum of (z_scale*f) over the domain (estimated by sampling)
+// 3) z_buffer is an additional lift above the minimum
+// 4) Solid: z = (-2*z_min) + z_buffer + 2*z_scale*f(x,y)
+//    Slice: z = (-2*z_min) + z_buffer + 2*z_scale*f(x,y) + 2*slot_h
 z_scale    = 10;         // mm per math-unit
-z_offset   = 40;         // mm
-z_floor    = 0;          // mm (clamp below)
+z_buffer   = 0;          // mm
+zmin_nx    = 80;         // sampling resolution for z_min estimate (x)
+zmin_ny    = 80;         // sampling resolution for z_min estimate (y)
 
 //////
 // Slot parameters
@@ -77,6 +85,12 @@ stand_N       = numslices;         // positions
 function lerp(a,b,t) = a + (b-a)*t;
 function clamp(v, lo, hi) = (v<lo)?lo : (v>hi)?hi : v;
 
+// Trig helpers that accept radians (OpenSCAD's sin/cos/tan take degrees)
+function rad2deg(r) = r * 180 / PI;
+function sin_rad(r) = sin(rad2deg(r));
+function cos_rad(r) = cos(rad2deg(r));
+function tan_rad(r) = tan(rad2deg(r));
+
 // Length of the generated slice in mm.
 // Here, `const_axis` means which math/physical axis is held constant for the slice:
 // - const_axis == "x" => x is constant, y varies => slice length uses y_length
@@ -99,8 +113,25 @@ function yk_from_k(k_) =
     (numslices<=1) ? ymin :
     lerp(ymin, ymin + y_span, (k_-1)/(numslices-1));
 
-// Convert f(x,y) to printable z(mm), clamped
-function z_mm(xm, ym) = max(z_floor, z_offset + z_scale * f(xm, ym));
+// Convert f(x,y) to mm (unshifted)
+function f_mm(xm, ym) = z_scale * f(xm, ym);
+
+// Estimate minimum of f_mm over the domain by sampling
+function z_min_raw() =
+    min([
+        for (j=[0:zmin_ny])
+            for (i=[0:zmin_nx])
+                let(xm = lerp(xmin, xmin + x_span, i/zmin_nx),
+                    ym = lerp(ymin, ymin + y_span, j/zmin_ny))
+                f_mm(xm, ym)
+    ]);
+
+// "z_min" per your definition: minimum of z_scale*f(x,y) over the domain (mm)
+z_min = z_min_raw();
+
+// Solid Z and slice Z as requested
+function z_solid_mm(xm, ym) = (-2*z_min) + z_buffer + 2*f_mm(xm, ym);
+function z_slice_mm(xm, ym) = z_solid_mm(xm, ym) + 2*slot_h;
 
 // Backwards-compatible list reverse (also fine on new versions)
 function reverse_list(v) = [ for (i = [len(v)-1 : -1 : 0]) v[i] ];
@@ -121,7 +152,7 @@ module solid3D(nx=solid_nx, ny=solid_ny) {
                     y_mm = y_length * j / ny,
                     xm   = x_math_from_mm(x_mm),
                     ym   = y_math_from_mm(y_mm),
-                    z    = z_mm(xm, ym))
+                    z    = z_solid_mm(xm, ym))
                 [x_mm, y_mm, z]
     ];
 
@@ -208,7 +239,7 @@ module slice2D_outline(k_=k, const_axis) {
             let(s_mm = slice_len * i / n_samples,
                 xm   = (const_axis=="x") ? xk : x_math_from_mm(s_mm),
                 ym   = (const_axis=="x") ? y_math_from_mm(s_mm) : yk,
-                z    = z_mm(xm, ym))
+                z    = z_slice_mm(xm, ym))
             [s_mm, z]
     ];
 
@@ -219,7 +250,7 @@ module slice2D_outline(k_=k, const_axis) {
 }
 
 module slice3D(k_=k, const_axis) {
-    // Some parameter combos clamp the profile to z_floor before reaching the slice end.
+    // Some parameter combos place the profile at/near z=0 before reaching the slice end.
     // If we place a slot beyond the last nonzero profile point, it won't appear.
     // So compute an effective length for slot placement based on the sampled curve.
     xk = xk_from_k(k_);
@@ -231,8 +262,8 @@ module slice3D(k_=k, const_axis) {
             let(s_mm = slice_len * i / n_samples,
                 xm   = (const_axis=="x") ? xk : x_math_from_mm(s_mm),
                 ym   = (const_axis=="x") ? y_math_from_mm(s_mm) : yk,
-                z    = z_mm(xm, ym))
-            if (z > z_floor + eps) i
+                z    = z_slice_mm(xm, ym))
+            if (z > eps) i
     ];
     slot_ref_len = (len(nonzero_idx) == 0) ? slice_len : (slice_len * max(nonzero_idx) / n_samples);
 
