@@ -7,9 +7,8 @@
 ///////////////////////// PARAMETERS //////////////////////////
 ///////////////////////////////////////////////////////////////
 
-
-
-MODE = "all_slices_y";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all_slices_x" | "all_slices_y" | "solid"
+// Choose the type of object to generate
+MODE = "all_slices_x";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all_slices_x" | "all_slices_y" | "solid"
                          // "slice_x" produces a slice in which x=constant
                          // "slice_y" produces a slice in which y=constant
                          // "stand_x" produces a stand for slice_x
@@ -20,31 +19,29 @@ MODE = "all_slices_y";          // "slice_x" | "slice_y" | "stand_x" | "stand_y"
 
 
 //////
-// The function and (math-domain / scaling) parameters
+// The function and related parameters
 //////
 
 // Uncomment exactly one of these files
 // Use no_presets.scad if you plan to enter your own function and custom parameters
 include <no_presets.scad>;
-// include <hyperbolic_paraboloid.scad>;
-
-
-//function f_custom(x,y) = let(r = sqrt(x*x + y*y))(r == 0) ? 2 : 2*sin_rad(r)/r; //use xmin=ymin=-10 and x_span=y_span=20
+//include <hyperbolic_paraboloid.scad>;
+//include <sombrero.scad>;
 
 // Custom parameters
 // These only apply when using: include <no_presets.scad>;
 // Custom function
-function f_custom(x,y) = 1.25*(x*x - y*y); // Note: sin_rad, cos_rad, tan_rad are trig functions that accept radians
+function f_user(x,y) = -x*x-4*y*y+4; // Note: sin_rad, cos_rad, tan_rad are trig functions that accept radians
 
-// Domain: [xmin_custom,xmin_custom+x_span_custom] x [ymin_custom,ymin_custom+y_span_custom]
-xmin_custom       = -2;         // math x-min
-ymin_custom       = -2;         // math y-min
-x_span_custom     = 4;          // math width in x-direction
-y_span_custom     = 4;          // math width in y-direction
+// Domain: [xmin,xmin+x_span] x [ymin,ymin+y_span]
+xmin       = -2;         // math x-min
+ymin       = -2;         // math y-min
+x_span     = 4;          // math width in x-direction
+y_span     = 4;          // math width in y-direction
 // Function in mm: z = -z_min + z_buffer + z_scale*f(x,y)
 // z_min is the minimum of z_scale*f over the domain
-z_scale_custom    = 10;         // mm - z_scale * f(x,y) is the function value in mm
-z_buffer_custom   = 5;          // mm - additional vertical translation above the minimum
+z_scale    = 10;         // mm - z_scale * f(x,y) is the function value in mm
+z_buffer   = 0;          // mm - additional vertical translation above the minimum
                          // z_buffer=0 will put the lowest point of the surface at z=0
                          // z_buffer=stand_height will put the lowest point at the top of the stand
 // End custom parameters
@@ -53,7 +50,7 @@ z_buffer_custom   = 5;          // mm - additional vertical translation above th
 //////
 // Slice parameters
 //////
-numslices  = 11;          // number of traces
+numslices  = 13;          // number of traces
 k          = 4;          // slice number to generate: 1...numslices
 slot_positions = [0.25, 0.75];  // slot placement(s) for the stand: for instance, slot_positions = [0.25, 0.75] would yield slots at 1/4 and 3/4 of the slice length.
 
@@ -69,19 +66,19 @@ stand_margin  = 0;       // mm - distance the stand extends beyond the last slic
 
 
 // Parameter bundle selected by SOURCE.
-params_custom = [xmin_custom, ymin_custom, x_span_custom, y_span_custom, z_scale_custom, z_buffer_custom];
-params = (SOURCE=="FROM_FILE") ? preset_params() : params_custom;
+params_user = [xmin, ymin, x_span, y_span, z_scale, z_buffer];
+params = (SOURCE=="FROM_FILE") ? preset_params() : params_user;
 
 // Selected (effective) parameters used by the rest of the file.
-// Domain: [xmin,xmin+x_span] x [ymin,ymin+y_span]
-xmin   = params[0];
-ymin   = params[1];
-x_span = params[2];
-y_span = params[3];
+// Domain: [xmin_eff,xmin_eff+x_span_eff] x [ymin_eff,ymin_eff+y_span_eff]
+xmin_eff   = params[0];
+ymin_eff   = params[1];
+x_span_eff = params[2];
+y_span_eff = params[3];
 
 // Vertical scaling
-z_scale  = params[4];
-z_buffer = params[5];
+z_scale_eff  = params[4];
+z_buffer_eff = params[5];
 
 // Sampling resolutions
 zmin_nx    = 80;         // sampling resolution for z_min estimate (x)
@@ -95,7 +92,7 @@ solid_ny   = 120;        // surface sampling in Y (higher = smoother, slower)
 ///////////////////////////////////////////////////////////////
 
 // Selected surface function
-function f(x,y) = (SOURCE=="FROM_FILE") ? preset_f(x,y) : f_custom(x,y);
+function f(x,y) = (SOURCE=="FROM_FILE") ? preset_f(x,y) : f_user(x,y);
 
 
 // Stand height is 2*slot_h; slots cut down from the top by slot_h.
@@ -121,32 +118,32 @@ function tan_rad(r) = tan(rad2deg(r));
 // - const_axis == "y" => y is constant, x varies => slice length uses x_length
 function slice_length_mm(const_axis) = (const_axis=="x") ? y_length : x_length;
 
-// Map y_mm in [0,y_length] to y_math in [ymin, ymin+y_span]
-function y_math_from_mm(y_mm) = lerp(ymin, ymin + y_span, y_mm/y_length);
+// Map y_mm in [0,y_length] to y_math in [ymin_eff, ymin_eff+y_span_eff]
+function y_math_from_mm(y_mm) = lerp(ymin_eff, ymin_eff + y_span_eff, y_mm/y_length);
 
-// Map x_mm in [0,x_length] to x_math in [xmin, xmin+x_span]
-function x_math_from_mm(x_mm) = lerp(xmin, xmin + x_span, x_mm/x_length);
+// Map x_mm in [0,x_length] to x_math in [xmin_eff, xmin_eff+x_span_eff]
+function x_math_from_mm(x_mm) = lerp(xmin_eff, xmin_eff + x_span_eff, x_mm/x_length);
 
-// Evenly spaced x_k in [xmin, xmin+x_span]
+// Evenly spaced x_k in [xmin_eff, xmin_eff+x_span_eff]
 function xk_from_k(k_) =
-    (numslices<=1) ? xmin :
-    lerp(xmin, xmin + x_span, (k_-1)/(numslices-1));
+    (numslices<=1) ? xmin_eff :
+    lerp(xmin_eff, xmin_eff + x_span_eff, (k_-1)/(numslices-1));
 
-// Evenly spaced y_k in [ymin, ymin+y_span]
+// Evenly spaced y_k in [ymin_eff, ymin_eff+y_span_eff]
 function yk_from_k(k_) =
-    (numslices<=1) ? ymin :
-    lerp(ymin, ymin + y_span, (k_-1)/(numslices-1));
+    (numslices<=1) ? ymin_eff :
+    lerp(ymin_eff, ymin_eff + y_span_eff, (k_-1)/(numslices-1));
 
 // Convert f(x,y) to mm (unshifted)
-function f_mm(xm, ym) = z_scale * f(xm, ym);
+function f_mm(xm, ym) = z_scale_eff * f(xm, ym);
 
 // Estimate minimum of f_mm over the domain by sampling
 function z_min_raw() =
     min([
         for (j=[0:zmin_ny])
             for (i=[0:zmin_nx])
-                let(xm = lerp(xmin, xmin + x_span, i/zmin_nx),
-                    ym = lerp(ymin, ymin + y_span, j/zmin_ny))
+                let(xm = lerp(xmin_eff, xmin_eff + x_span_eff, i/zmin_nx),
+                    ym = lerp(ymin_eff, ymin_eff + y_span_eff, j/zmin_ny))
                 f_mm(xm, ym)
     ]);
 
@@ -154,7 +151,7 @@ function z_min_raw() =
 z_min = z_min_raw();
 
 // Solid Z and slice Z as requested
-function z_solid_mm(xm, ym) = (-z_min) + z_buffer + f_mm(xm, ym);
+function z_solid_mm(xm, ym) = (-z_min) + z_buffer_eff + f_mm(xm, ym);
 function z_slice_mm(xm, ym) = z_solid_mm(xm, ym);
 
 // Backwards-compatible list reverse (also fine on new versions)
