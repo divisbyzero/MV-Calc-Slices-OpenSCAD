@@ -57,7 +57,7 @@ column_centers_mm = [[-37,0],[37,0]];   // list of [x_mm, y_mm] centers; empty =
 //////
 // Slice parameters
 //////
-numslices  = 13;          // number of traces
+numslices  = 11;          // number of traces
 k          = 4;          // slice number to generate: 1...numslices
 slot_positions = [0.25, 0.75];  // slot placement(s) for the stand: for instance, slot_positions = [0.25, 0.75] would yield slots at 1/4 and 3/4 of the slice length.
 
