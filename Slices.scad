@@ -18,13 +18,13 @@ MODE = "all_slices_y";          // "slice_x" | "slice_y" | "stand_x" | "stand_y"
                          // "all_slices_y" produces the stand_y plus all slice_y pieces as a single model (no slots)
                          // "solid" produces the full 3D surface solid
 
-// Choose a built-in preset surface, or "custom" to edit the function/parameters below.
-// Presets must be available via `use <...>` above.
-PRESET = "custom"; // "custom" | "hyperbolic_paraboloid"
 
 //////
 // The function -- user defined or from a preset
 //////
+// Choose a built-in preset surface, or "custom" to edit the function/parameters below.
+PRESET = "custom"; // "custom" | "hyperbolic_paraboloid"
+
 // Parameters for a custom function (not one of the predefined functions).
 // Note: sin_rad, cos_rad, tan_rad are trig functions that accept radians
 function f_custom(x,y) = 1.25*(x*x - y*y);
