@@ -29,6 +29,7 @@ Preset files use a simple, consistent interface:
 ```scad
 function preset_f(x,y) = ...;
 function preset_params() = [xmin, ymin, x_span, y_span, z_scale, z_buffer];
+function preset_column_params() = [column_size_x, column_size_y, column_centers_mm];
 ```
 
 ## Requirements
@@ -65,6 +66,15 @@ Note on placement:
 - `MODE="solid"` and `MODE="all_slices_*"` are centered on the origin in XY (e.g. with `x_length=80`, `x` runs from `-40` to `+40`).
 
 For `MODE="all_slices_z"`, the bottom slab sits on the XY plane (`z=0`). Each slab has thickness `slice_thickness`, and the current vertical pitch rule is based on the X-direction slice spacing (approximately `x_length/(numslices-1)` mm).
+
+`MODE="all_slices_z"` also supports optional vertical columns (useful as built-in supports). In [Slices.scad](Slices.scad), set:
+
+- `column_size_x`, `column_size_y` (mm)
+- `column_centers_mm = [[x0,y0], [x1,y1], ...]`
+
+Column centers are in the model’s XY coordinates (mm), where the solid is centered on the origin.
+
+When using a preset surface file, the column settings come from that preset file’s `preset_column_params()`.
 
 ## Defining the function
 

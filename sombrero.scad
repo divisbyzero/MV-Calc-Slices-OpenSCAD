@@ -26,3 +26,10 @@ function preset_params() = [
      15, // z_scale (mm per math unit)
      20  // z_buffer (mm)
 ];
+
+// Optional columns for MODE="all_slices_z": [column_size_x, column_size_y, column_centers_mm]
+function preset_column_params() = [
+    3,
+    3,
+    []
+];

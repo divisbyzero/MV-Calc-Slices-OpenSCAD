@@ -17,3 +17,10 @@ function preset_params() = [
     10,
      0
 ];
+
+// [column_size_x, column_size_y, column_centers_mm]
+function preset_column_params() = [
+    3,
+    3,
+    []
+];

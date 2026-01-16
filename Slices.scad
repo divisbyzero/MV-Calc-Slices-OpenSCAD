@@ -26,8 +26,8 @@ MODE = "all_slices_z";          // "slice_x" | "slice_y" | "stand_x" | "stand_y"
 // Uncomment exactly one of these files
 // Use no_presets.scad if you plan to enter your own function and custom parameters
 //include <no_presets.scad>;
-include <hyperbolic_paraboloid.scad>;
-//include <elliptic_paraboloid.scad>;
+//include <hyperbolic_paraboloid.scad>;
+include <elliptic_paraboloid.scad>;
 //include <sombrero.scad>;
 
 // Custom parameters
@@ -46,6 +46,11 @@ z_scale    = 30;         // mm - z_scale * f(x,y) is the function value in mm
 z_buffer   = 0;          // mm - additional vertical translation above the minimum
                          // z_buffer=0 will put the lowest point of the surface at z=0
                          // z_buffer=stand_height will put the lowest point at the top of the stand
+// Vertical columns to support the horizonta slices when using MODE="all_slices_z"
+// Column centers are specified in model XY coordinates (mm) where the solid is centered on the origin.
+column_size_x = 6;        // mm - column size in X
+column_size_y = 3;        // mm - column size in Y
+column_centers_mm = [[-37,0],[37,0]];   // list of [x_mm, y_mm] centers; empty => no columns
 // End custom parameters
 // The parameters below can apply to any model
 
@@ -71,6 +76,10 @@ stand_margin  = 0;       // mm - distance the stand extends beyond the last slic
 params_user = [xmin, ymin, x_span, y_span, z_scale, z_buffer];
 params = (SOURCE=="FROM_FILE") ? preset_params() : params_user;
 
+// Column bundle selected by SOURCE.
+column_params_user = [column_size_x, column_size_y, column_centers_mm];
+column_params = (SOURCE=="FROM_FILE") ? preset_column_params() : column_params_user;
+
 // Selected (effective) parameters used by the rest of the file.
 // Domain: [xmin_eff,xmin_eff+x_span_eff] x [ymin_eff,ymin_eff+y_span_eff]
 xmin_eff   = params[0];
@@ -81,6 +90,11 @@ y_span_eff = params[3];
 // Vertical scaling
 z_scale_eff  = params[4];
 z_buffer_eff = params[5];
+
+// Column sizing/placement (effective)
+column_size_x_eff = column_params[0];
+column_size_y_eff = column_params[1];
+column_centers_mm_eff = column_params[2];
 
 // Sampling resolutions
 zmin_nx    = 80;         // sampling resolution for z_min estimate (x)
@@ -446,22 +460,39 @@ module all_slices_z() {
     // Slab i spans z in [i*dz_mm, i*dz_mm + slab_t].
     z_top = (numslices<=1) ? 1e9 : ((numslices-1)*dz_mm + slab_t);
 
-    difference() {
-        solid3D();
+    module sliced_slabs() {
+        difference() {
+            solid3D();
 
-        // Delete horizontal gaps between slabs
-        if (numslices>1 && z_gap>0) {
-            for (i=[0:numslices-2]) {
-                translate([-x_length/2 - cut_pad, -y_length/2 - cut_pad, i*dz_mm + slab_t])
-                    cube([cut_x, cut_y, z_gap], center=false);
+            // Delete horizontal gaps between slabs
+            if (numslices>1 && z_gap>0) {
+                for (i=[0:numslices-2]) {
+                    translate([-x_length/2 - cut_pad, -y_length/2 - cut_pad, i*dz_mm + slab_t])
+                        cube([cut_x, cut_y, z_gap], center=false);
+                }
+            }
+
+            // Delete everything above the top slab so there are exactly numslices pieces
+            if (numslices>1) {
+                translate([-x_length/2 - cut_pad, -y_length/2 - cut_pad, z_top])
+                    cube([cut_x, cut_y, 10000], center=false);
             }
         }
+    }
 
-        // Delete everything above the top slab so there are exactly numslices pieces
-        if (numslices>1) {
-            translate([-x_length/2 - cut_pad, -y_length/2 - cut_pad, z_top])
-                cube([cut_x, cut_y, 10000], center=false);
+    module columns_up_to(z_height) {
+        if (column_size_x_eff > 0 && column_size_y_eff > 0 && len(column_centers_mm_eff) > 0) {
+            for (c = column_centers_mm_eff) {
+                translate([c[0] - column_size_x_eff/2, c[1] - column_size_y_eff/2, 0])
+                    cube([column_size_x_eff, column_size_y_eff, z_height], center=false);
+            }
         }
+    }
+
+    union() {
+        sliced_slabs();
+        if (numslices>1)
+            columns_up_to(z_top);
     }
 }
 

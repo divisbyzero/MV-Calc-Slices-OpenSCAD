@@ -24,6 +24,13 @@ function preset_params() = [
      5   // z_buffer
 ];
 
+// Optional columns for MODE="all_slices_z": [column_size_x, column_size_y, column_centers_mm]
+function preset_column_params() = [
+    6,
+    3,
+    [[-37,0],[37,0]]
+];
+
 // Backwards-compatible aliases (older Slices.scad versions)
 function f_hyperbolic_paraboloid(x, y) = preset_f(x, y);
 function params_hyperbolic_paraboloid() = preset_params();
