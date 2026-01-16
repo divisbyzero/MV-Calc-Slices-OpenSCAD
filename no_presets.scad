@@ -8,19 +8,15 @@ SOURCE = "CUSTOM";
 
 function preset_f(x, y) = 0;
 
-// [xmin, ymin, x_span, y_span, z_scale, z_buffer]
+// [xmin, ymin, x_span, y_span, z_scale, z_buffer, column_size_x, column_size_y, column_centers_mm]
 function preset_params() = [
     -2,
     -2,
      4,
      4,
     10,
-     0
-];
-
-// [column_size_x, column_size_y, column_centers_mm]
-function preset_column_params() = [
-    3,
-    3,
-    []
+     0,
+     3,
+     3,
+     []
 ];

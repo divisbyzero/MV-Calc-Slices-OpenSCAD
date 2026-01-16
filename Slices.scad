@@ -90,12 +90,12 @@ solid_ny   = 120;        // surface sampling in Y (higher = smoother, slower)
 
 
 // Parameter bundle selected by SOURCE.
-params_user = [xmin, ymin, x_span, y_span, z_scale, z_buffer];
+// Preset interface:
+//   preset_params() = [xmin, ymin, x_span, y_span, z_scale, z_buffer,
+//                      column_size_x, column_size_y, column_centers_mm]
+// Backwards compatible: if a preset only returns the first 6 entries, column defaults apply.
+params_user = [xmin, ymin, x_span, y_span, z_scale, z_buffer, column_size_x, column_size_y, column_centers_mm];
 params = (SOURCE=="FROM_FILE") ? preset_params() : params_user;
-
-// Column bundle selected by SOURCE.
-column_params_user = [column_size_x, column_size_y, column_centers_mm];
-column_params = (SOURCE=="FROM_FILE") ? preset_column_params() : column_params_user;
 
 // Selected (effective) parameters used by the rest of the file.
 // Domain: [xmin_eff,xmin_eff+x_span_eff] x [ymin_eff,ymin_eff+y_span_eff]
@@ -109,9 +109,9 @@ z_scale_eff  = params[4];
 z_buffer_eff = params[5];
 
 // Column sizing/placement (effective)
-column_size_x_eff = column_params[0];
-column_size_y_eff = column_params[1];
-column_centers_mm_eff = column_params[2];
+column_size_x_eff = (len(params) > 6) ? params[6] : 3;
+column_size_y_eff = (len(params) > 7) ? params[7] : 3;
+column_centers_mm_eff = (len(params) > 8) ? params[8] : [];
 
 
 // Selected surface function

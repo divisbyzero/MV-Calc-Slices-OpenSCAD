@@ -28,8 +28,8 @@ Preset files use a simple, consistent interface:
 
 ```scad
 function preset_f(x,y) = ...;
-function preset_params() = [xmin, ymin, x_span, y_span, z_scale, z_buffer];
-function preset_column_params() = [column_size_x, column_size_y, column_centers_mm];
+// [xmin, ymin, x_span, y_span, z_scale, z_buffer, column_size_x, column_size_y, column_centers_mm]
+function preset_params() = [ ... ];
 ```
 
 ## Requirements
@@ -80,7 +80,7 @@ Column centers are in the model’s XY coordinates (mm), where the solid is cent
 
 The columns are generated as solids above each rectangular base footprint, under the surface, and capped at the top of the highest remaining horizontal slice (so their tops may be curved, and they will not extend into the deleted gap regions).
 
-When using a preset surface file, the column settings come from that preset file’s `preset_column_params()`.
+When using a preset surface file, the column settings come from that preset file’s `preset_params()` (the last 3 entries).
 
 ## Defining the function
 

@@ -7,7 +7,7 @@
 //
 // Standard preset interface expected by Slices.scad:
 //   - function preset_f(x,y)
-//   - function preset_params() = [xmin, ymin, x_span, y_span, z_scale, z_buffer]
+//   - function preset_params() = [xmin, ymin, x_span, y_span, z_scale, z_buffer, column_size_x, column_size_y, column_centers_mm]
 
 SOURCE = "FROM_FILE";
 
@@ -21,12 +21,8 @@ function preset_params() = [
     2*sqrt(2),  // x_span
     2,          // y_span
     30,         // z_scale
-    0           // z_buffer
-];
-
-// Optional columns for MODE="all_slices_z": [column_size_x, column_size_y, column_centers_mm]
-function preset_column_params() = [
-    3,
-    3,
-    [[0,0]]
+    0,          // z_buffer
+    3,          // column_size_x
+    3,          // column_size_y
+    [[0,0]]     // column_centers_mm
 ];
