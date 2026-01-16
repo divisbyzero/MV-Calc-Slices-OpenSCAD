@@ -27,18 +27,18 @@ PRESET = "custom"; // "custom" | "hyperbolic_paraboloid"
 
 // Parameters for a custom function (not one of the predefined functions).
 // Note: sin_rad, cos_rad, tan_rad are trig functions that accept radians
-function f_custom(x,y) = 1.25*(x*x - y*y);
+function f_user(x,y) = 1.25*(x*x - y*y);
 //function f(x,y) = let(r = sqrt(x*x + y*y))(r == 0) ? 2 : 2*sin_rad(r)/r; //use xmin=ymin=-10 and x_span=y_span=20
 // Domain: [xmin,xmin+x_span] x [ymin,ymin+y_span]
-xmin_custom       = -2;         // math x-min
-ymin_custom       = -2;         // math y-min
-x_span_custom     = 4;          // math width in x-direction
-y_span_custom     = 4;          // math width in y-direction
+xmin       = -2;         // math x-min
+ymin       = -2;         // math y-min
+x_span     = 4;          // math width in x-direction
+y_span     = 4;          // math width in y-direction
 // Function in mm: z = -z_min + z_buffer + z_scale*f(x,y)
 // z_min is the minimum of z_scale*f over the domain 
-z_scale_custom    = 10;         // mm - z_scale * f(x,y) is the function value in mm
+z_scale    = 10;         // mm - z_scale * f(x,y) is the function value in mm
                                 //
-z_buffer_custom   = 5;          // mm -additional vertical translation above the minimum
+z_buffer   = 5;          // mm -additional vertical translation above the minimum
                          // z_buffer=0 will put the lowest point of the surface at z=0
                          // z_buffer=stand_height will put the lowest point at the top of the stand
 
@@ -62,18 +62,16 @@ stand_margin  = 0;       // mm - distance the stand extends beyond the last slic
 
 
 // Parameter bundle selected by preset (or custom).
-params_custom = [xmin_custom, ymin_custom, x_span_custom, y_span_custom, z_scale_custom, z_buffer_custom];
-params = (PRESET=="hyperbolic_paraboloid") ? params_hyperbolic_paraboloid() : params_custom;
+params_user = [xmin, ymin, x_span, y_span, z_scale, z_buffer];
+params = (PRESET=="hyperbolic_paraboloid") ? params_hyperbolic_paraboloid() : params_user;
 
-// Domain: [xmin,xmin+x_span] x [ymin,ymin+y_span]
-xmin   = params[0];
-ymin   = params[1];
-x_span = params[2];
-y_span = params[3];
-
-// Vertical scaling
-z_scale  = params[4];
-z_buffer = params[5];
+// Effective (selected) parameters used by the geometry below.
+xmin_eff   = params[0];
+ymin_eff   = params[1];
+x_span_eff = params[2];
+y_span_eff = params[3];
+z_scale_eff  = params[4];
+z_buffer_eff = params[5];
 
 // Sampling resolutions
 zmin_nx    = 80;         // sampling resolution for z_min estimate (x)
@@ -89,7 +87,7 @@ solid_ny   = 120;        // surface sampling in Y (higher = smoother, slower)
 // Inputs a function from a file based on PRESET
 function f(x,y) =
     (PRESET=="hyperbolic_paraboloid") ? f_hyperbolic_paraboloid(x,y) :
-    f_custom(x,y);
+    f_user(x,y);
 
 
 // Stand height is 2*slot_h; slots cut down from the top by slot_h.
@@ -116,31 +114,31 @@ function tan_rad(r) = tan(rad2deg(r));
 function slice_length_mm(const_axis) = (const_axis=="x") ? y_length : x_length;
 
 // Map y_mm in [0,y_length] to y_math in [ymin, ymin+y_span]
-function y_math_from_mm(y_mm) = lerp(ymin, ymin + y_span, y_mm/y_length);
+function y_math_from_mm(y_mm) = lerp(ymin_eff, ymin_eff + y_span_eff, y_mm/y_length);
 
 // Map x_mm in [0,x_length] to x_math in [xmin, xmin+x_span]
-function x_math_from_mm(x_mm) = lerp(xmin, xmin + x_span, x_mm/x_length);
+function x_math_from_mm(x_mm) = lerp(xmin_eff, xmin_eff + x_span_eff, x_mm/x_length);
 
 // Evenly spaced x_k in [xmin, xmin+x_span]
 function xk_from_k(k_) =
-    (numslices<=1) ? xmin :
-    lerp(xmin, xmin + x_span, (k_-1)/(numslices-1));
+    (numslices<=1) ? xmin_eff :
+    lerp(xmin_eff, xmin_eff + x_span_eff, (k_-1)/(numslices-1));
 
 // Evenly spaced y_k in [ymin, ymin+y_span]
 function yk_from_k(k_) =
-    (numslices<=1) ? ymin :
-    lerp(ymin, ymin + y_span, (k_-1)/(numslices-1));
+    (numslices<=1) ? ymin_eff :
+    lerp(ymin_eff, ymin_eff + y_span_eff, (k_-1)/(numslices-1));
 
 // Convert f(x,y) to mm (unshifted)
-function f_mm(xm, ym) = z_scale * f(xm, ym);
+function f_mm(xm, ym) = z_scale_eff * f(xm, ym);
 
 // Estimate minimum of f_mm over the domain by sampling
 function z_min_raw() =
     min([
         for (j=[0:zmin_ny])
             for (i=[0:zmin_nx])
-                let(xm = lerp(xmin, xmin + x_span, i/zmin_nx),
-                    ym = lerp(ymin, ymin + y_span, j/zmin_ny))
+                let(xm = lerp(xmin_eff, xmin_eff + x_span_eff, i/zmin_nx),
+                    ym = lerp(ymin_eff, ymin_eff + y_span_eff, j/zmin_ny))
                 f_mm(xm, ym)
     ]);
 
@@ -148,7 +146,7 @@ function z_min_raw() =
 z_min = z_min_raw();
 
 // Solid Z and slice Z as requested
-function z_solid_mm(xm, ym) = (-z_min) + z_buffer + f_mm(xm, ym);
+function z_solid_mm(xm, ym) = (-z_min) + z_buffer_eff + f_mm(xm, ym);
 function z_slice_mm(xm, ym) = z_solid_mm(xm, ym);
 
 // Backwards-compatible list reverse (also fine on new versions)
