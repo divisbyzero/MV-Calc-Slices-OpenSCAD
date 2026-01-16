@@ -8,7 +8,7 @@
 ///////////////////////////////////////////////////////////////
 
 // Choose the type of object to generate
-MODE = "all_slices_x";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all_slices_x" | "all_slices_y" | "all_slices_z" | "solid"
+MODE = "all_slices_z";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all_slices_x" | "all_slices_y" | "all_slices_z" | "solid"
                          // "slice_x" produces a slice in which x=constant
                          // "slice_y" produces a slice in which y=constant
                          // "stand_x" produces a stand for slice_x
