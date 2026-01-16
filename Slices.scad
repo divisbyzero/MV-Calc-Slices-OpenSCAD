@@ -31,16 +31,16 @@ include <no_presets.scad>;
 // Custom parameters
 // These only apply when using: include <no_presets.scad>;
 // Custom function
-function f_user(x,y) = -x*x-4*y*y+4; // Note: sin_rad, cos_rad, tan_rad are trig functions that accept radians
+function f_user(x,y) = -x*x-2*y*y; // Note: sin_rad, cos_rad, tan_rad are trig functions that accept radians
 
 // Domain: [xmin,xmin+x_span] x [ymin,ymin+y_span]
-xmin       = -2;         // math x-min
-ymin       = -2;         // math y-min
-x_span     = 4;          // math width in x-direction
-y_span     = 4;          // math width in y-direction
+xmin       = -sqrt(2);         // math x-min
+ymin       = -1;         // math y-min
+x_span     = 2*sqrt(2);          // math width in x-direction
+y_span     = 2;          // math width in y-direction
 // Function in mm: z = -z_min + z_buffer + z_scale*f(x,y)
 // z_min is the minimum of z_scale*f over the domain
-z_scale    = 10;         // mm - z_scale * f(x,y) is the function value in mm
+z_scale    = 30;         // mm - z_scale * f(x,y) is the function value in mm
 z_buffer   = 0;          // mm - additional vertical translation above the minimum
                          // z_buffer=0 will put the lowest point of the surface at z=0
                          // z_buffer=stand_height will put the lowest point at the top of the stand
@@ -58,7 +58,7 @@ slot_positions = [0.25, 0.75];  // slot placement(s) for the stand: for instance
 // Size parameters
 //////
 x_length   = 80;        // mm - size of the final object in X direction
-y_length   = 80;        // mm - size of the final object in Y direction
+// y_length is computed to maintain aspect ratio based on x_span and y_span
 slice_thickness = 2.0;   // mm 
 clearance       = 0.25;  // mm - slot fit tolerance
 stand_height   = 15;         // mm - height of the slice stands
@@ -99,6 +99,7 @@ function f(x,y) = (SOURCE=="FROM_FILE") ? preset_f(x,y) : f_user(x,y);
 stand_N       = numslices;         // positions
 slot_h     = stand_height/2;          // mm — height of slots cut into slices and stands
 
+y_length   = x_length*y_span/x_span;        // mm - size of the final object in Y direction
 
 // Slot opening (in the mating direction) = slice thickness + clearance
 slot_opening_w = slice_thickness + clearance;
@@ -166,23 +167,25 @@ module solid3D(nx=solid_nx, ny=solid_ny) {
     function top_vid(i, j) = vid(i, j);
     function bot_vid(i, j) = (nx+1)*(ny+1) + vid(i, j);
 
+    // Center the solid on the origin in XY:
+    // x in [-x_length/2, +x_length/2], y in [-y_length/2, +y_length/2]
     top_pts = [
         for (j=[0:ny])
             for (i=[0:nx])
-                let(x_mm = x_length * i / nx,
-                    y_mm = y_length * j / ny,
-                    xm   = x_math_from_mm(x_mm),
-                    ym   = y_math_from_mm(y_mm),
-                    z    = z_solid_mm(xm, ym))
-                [x_mm, y_mm, z]
+                let(x_pos = lerp(-x_length/2, x_length/2, i/nx),
+                    y_pos = lerp(-y_length/2, y_length/2, j/ny),
+                    xm    = x_math_from_mm(x_pos + x_length/2),
+                    ym    = y_math_from_mm(y_pos + y_length/2),
+                    z     = z_solid_mm(xm, ym))
+                [x_pos, y_pos, z]
     ];
 
     bot_pts = [
         for (j=[0:ny])
             for (i=[0:nx])
-                let(x_mm = x_length * i / nx,
-                    y_mm = y_length * j / ny)
-                [x_mm, y_mm, 0]
+                let(x_pos = lerp(-x_length/2, x_length/2, i/nx),
+                    y_pos = lerp(-y_length/2, y_length/2, j/ny))
+                [x_pos, y_pos, 0]
     ];
 
     // Top surface triangles (CCW when viewed from outside / above)
@@ -365,27 +368,57 @@ module stand3D_upright_no_slots(const_axis) {
         cube([ slice_thickness, stand_len, stand_height ], center=false);
 }
 
-// One-piece assembly: upright stand + all slices, no slots.
+// One-piece assembly: place all slices at their true x/y positions.
+//
+// - Sits on the XY plane (z>=0) like the other modes.
+// - Centered on the origin:
+//     x in [-x_length/2, +x_length/2], y in [-y_length/2, +y_length/2]
+// - No swapping of x/y roles.
+//
+// Stand(s) are simple beams that connect all slices:
+// - For all_slices_y (const_axis="y"), stands run along +Y and are placed at X positions.
+// - For all_slices_x (const_axis="x"), stands run along +X and are placed at Y positions.
 module all_slices_assembled(const_axis) {
     slice_len = slice_length_mm(const_axis);
-    stand_len = slice_length_mm(const_axis) + 2*stand_margin;
 
-    function posY(i) =
-        (stand_N<=1) ? (stand_len/2) :
-        stand_margin + (stand_len - 2*stand_margin) * (i/(stand_N-1));
+    function slice_pos_mm(i) =
+        (stand_N<=1) ? 0 :
+        (const_axis=="x")
+            ? lerp(-x_length/2, x_length/2, i/(stand_N-1))
+            : lerp(-y_length/2, y_length/2, i/(stand_N-1));
 
     union() {
-        // Place one stand for each slot position along the slice length.
-        // Example: slot_positions=[0.5] centers the stand halfway along the slice.
-        for (p = slot_positions) {
-            translate([ p*slice_len - slice_thickness/2, 0, 0 ])
-                stand3D_upright_no_slots(const_axis);
+        // Stands (beams)
+        if (const_axis=="y") {
+            // y is constant per slice => slices are placed along Y
+            for (p = slot_positions) {
+                x0 = lerp(-x_length/2, x_length/2, p);
+                translate([x0 - slice_thickness/2, -y_length/2 - stand_margin, 0])
+                    cube([slice_thickness, y_length + 2*stand_margin, stand_height], center=false);
+            }
+        } else {
+            // x is constant per slice => slices are placed along X
+            for (p = slot_positions) {
+                y0 = lerp(-y_length/2, y_length/2, p);
+                translate([-x_length/2 - stand_margin, y0 - slice_thickness/2, 0])
+                    cube([x_length + 2*stand_margin, slice_thickness, stand_height], center=false);
+            }
         }
+
+        // Slices
         for (i=[0:stand_N-1]) {
-            yc = posY(i);
-            // Center the slice thickness around yc (rotation makes extrusion go in -Y).
-            translate([0, yc + slice_thickness/2, 0])
-                slice3D_upright_no_slots(i+1, const_axis);
+            pos = slice_pos_mm(i);
+
+            if (const_axis=="y") {
+                // slice_y: plane is XZ, thickness is Y
+                translate([-slice_len/2, pos + slice_thickness/2, 0])
+                    slice3D_upright_no_slots(i+1, "y");
+            } else {
+                // slice_x: plane is YZ, thickness is X
+                translate([pos + slice_thickness/2, -slice_len/2, 0])
+                    rotate([90, 0, 90])
+                        slice3D_no_slots(i+1, "x");
+            }
         }
     }
 }

@@ -57,6 +57,11 @@ Set `MODE` to one of the following:
 
 The file’s last section automatically builds the geometry for the selected `MODE`.
 
+Note on placement:
+
+- `MODE="slice_*"` and `MODE="stand_*"` are oriented/placed in the first quadrant for easy STL exporting/printing.
+- `MODE="solid"` and `MODE="all_slices_*"` are centered on the origin in XY (e.g. with `x_length=80`, `x` runs from `-40` to `+40`).
+
 ## Defining the function
 
 If using custom mode (i.e. [no_presets.scad](no_presets.scad) is included), edit the custom function near the top:
