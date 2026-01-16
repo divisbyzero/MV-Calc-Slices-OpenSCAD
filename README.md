@@ -111,16 +111,11 @@ These parameters control how math coordinates map to millimeters:
 
 When using a preset surface file, the domain/scaling parameters come from that file’s `preset_params()` instead of the values you set in [Slices.scad](Slices.scad).
 
-Internally, the script estimates the minimum value of `z_scale*f(x,y)` over the domain and shifts everything upward so the model has a flat base at `z=0`.
-
 In terms of the math-defined height in millimeters,
 
 - `f_mm(x,y) = z_scale * f(x,y)`
-- `z_min = min(f_mm)` over the sampled domain
 - surface height used for the solid is:
-   - `z_solid_mm(x,y) = -z_min + z_buffer + f_mm(x,y)`
-
-So the minimum of `z_solid_mm` is `z_buffer`.
+   - `z_solid_mm(x,y) = z_buffer + f_mm(x,y)`
 
 Slice profiles (used by `MODE="slice_*"` and also by the assembled modes) use the same height map:
 

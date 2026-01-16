@@ -8,7 +8,7 @@
 ///////////////////////////////////////////////////////////////
 
 // Choose the type of object to generate
-MODE = "all_slices_z";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all_slices_x" | "all_slices_y" | "all_slices_z" | "solid"
+MODE = "solid";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all_slices_x" | "all_slices_y" | "all_slices_z" | "solid"
                          // "slice_x" produces a slice in which x=constant
                          // "slice_y" produces a slice in which y=constant
                          // "stand_x" produces a stand for slice_x
@@ -33,7 +33,7 @@ include <no_presets.scad>;
 // Custom parameters
 // These only apply when using no_presets.scad
 // Custom function
-function f_user(x,y) = -x*x-2*y*y; // Note: sin_rad, cos_rad, tan_rad are trig functions that accept radians
+function f_user(x,y) = -x*x-2*y*y+2; // Note: sin_rad, cos_rad, tan_rad are trig functions that accept radians
 
 // Domain: [xmin,xmin+x_span] x [ymin,ymin+y_span]
 // Note: if the domain is not a square, then keeping the same number of traces will yield traces that are spaced by different amounts in the two directions
@@ -41,8 +41,7 @@ xmin       = -sqrt(2);         // math x-min
 ymin       = -1;         // math y-min
 x_span     = 2*sqrt(2);          // math width in x-direction
 y_span     = 2;          // math width in y-direction
-// Function in mm: z = -z_min + z_buffer + z_scale*f(x,y)
-// z_min is the minimum of z_scale*f over the domain
+// Function in mm: z = z_buffer + z_scale*f(x,y)
 z_scale    = 30;         // mm - z_scale * f(x,y) is the function value in mm
 z_buffer   = 0;          // mm - additional vertical translation above the minimum
                          // z_buffer=0 will put the lowest point of the surface at z=0
@@ -193,14 +192,12 @@ function z_max_raw() =
                 f_mm(xm, ym)
     ]);
 
-// "z_min" per your definition: minimum of z_scale*f(x,y) over the domain (mm)
+// "z_min" and "z_max" are of f_mm over the domain (mm)
 z_min = z_min_raw();
-
-// Max height (mm) after applying the same vertical shift as the solid
-z_max = (-z_min) + z_buffer_eff + z_max_raw();
+z_max = z_max_raw();
 
 // Solid Z and slice Z as requested
-function z_solid_mm(xm, ym) = (-z_min) + z_buffer_eff + f_mm(xm, ym);
+function z_solid_mm(xm, ym) = z_buffer_eff + f_mm(xm, ym);
 function z_slice_mm(xm, ym) = z_solid_mm(xm, ym);
 
 // Backwards-compatible list reverse (also fine on new versions)
