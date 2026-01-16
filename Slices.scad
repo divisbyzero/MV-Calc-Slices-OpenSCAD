@@ -8,7 +8,7 @@
 ///////////////////////////////////////////////////////////////
 
 // Choose the type of object to generate
-MODE = "solid";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all_slices_x" | "all_slices_y" | "all_slices_z" | "solid"
+MODE = "all_slices_y";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all_slices_x" | "all_slices_y" | "all_slices_z" | "solid"
                          // "slice_x" produces a slice in which x=constant
                          // "slice_y" produces a slice in which y=constant
                          // "stand_x" produces a stand for slice_x
@@ -59,7 +59,7 @@ column_centers_mm = [[0,0]];   // list of [x_mm, y_mm] centers; empty => no colu
 //////
 numslices  = 11;          // the total number of traces (for MODE="slice_x" or "slice_y" or "all_slices_x" or "all_slices_y". It will also determine the spacing of horizontal slices in MODE="all_slices_z")
 k          = 4;          // slice number to generate: 1...numslices (for MODE="slice_x" or "slice_y")
-stand_locations = [0.25, 0.75];  // locations for the stands: for instance, stand_locations = [0.25, 0.75] would yield stands at 1/4 and 3/4 of the slice length (for the MODE="stand_x" or "stand_y" or "all_slices_x" or "all_slices_y")
+stand_locations = [0.5];  // locations for the stands: for instance, stand_locations = [0.25, 0.75] would yield stands at 1/4 and 3/4 of the slice length (for the MODE="stand_x" or "stand_y" or "all_slices_x" or "all_slices_y")
 
 //////
 // Size parameters
@@ -192,12 +192,21 @@ function z_max_raw() =
                 f_mm(xm, ym)
     ]);
 
-// "z_min" and "z_max" are of f_mm over the domain (mm)
-z_min = z_min_raw();
-z_max = z_max_raw();
+// Surface height in mm (may be negative)
+function z_surface_mm(xm, ym) = z_buffer_eff + f_mm(xm, ym);
+
+// Cache sampled min/max of the surface over the domain (mm)
+z_surface_min = z_buffer_eff + z_min_raw();
+z_surface_max = z_buffer_eff + z_max_raw();
+
+// "z_min" and "z_max" are of the actual, clipped surface height over the domain (mm)
+// (the solid only exists above the XY plane).
+z_min = max(0, z_surface_min);
+z_max = max(0, z_surface_max);
 
 // Solid Z and slice Z as requested
-function z_solid_mm(xm, ym) = z_buffer_eff + f_mm(xm, ym);
+// Keep only the positive-z portion of the surface.
+function z_solid_mm(xm, ym) = max(0, z_surface_mm(xm, ym));
 function z_slice_mm(xm, ym) = z_solid_mm(xm, ym);
 
 // Backwards-compatible list reverse (also fine on new versions)
@@ -207,90 +216,134 @@ function reverse_list(v) = [ for (i = [len(v)-1 : -1 : 0]) v[i] ];
 // Solid: full 3D surface over (x,y) with a flat bottom at z=0.
 // This creates a watertight mesh suitable for STL export.
 module solid3D(nx=solid_nx, ny=solid_ny) {
-    // Vertex indexing for a (nx+1) x (ny+1) grid
-    function vid(i, j) = i + (nx+1)*j;
-    function top_vid(i, j) = vid(i, j);
-    function bot_vid(i, j) = (nx+1)*(ny+1) + vid(i, j);
+    // Robust approach:
+    // 1) Build a watertight solid from a Z "floor" (below any negative surface) up to the surface.
+    // 2) Intersect with z>=0 half-space. This yields exactly the positive-z portion with no extra
+    //    thin sheet outside the positive footprint, and avoids fragile 2D-mask booleans.
 
-    // Center the solid on the origin in XY:
-    // x in [-x_length/2, +x_length/2], y in [-y_length/2, +y_length/2]
-    top_pts = [
-        for (j=[0:ny])
-            for (i=[0:nx])
-                let(x_pos = lerp(-x_length/2, x_length/2, i/nx),
-                    y_pos = lerp(-y_length/2, y_length/2, j/ny),
-                    xm    = x_math_from_mm(x_pos + x_length/2),
-                    ym    = y_math_from_mm(y_pos + y_length/2),
-                    z     = z_solid_mm(xm, ym))
-                [x_pos, y_pos, z]
-    ];
+    z_floor = min(0, z_surface_min) - 1; // ensure below any negative surface; small pad helps CGAL
 
-    bot_pts = [
-        for (j=[0:ny])
-            for (i=[0:nx])
-                let(x_pos = lerp(-x_length/2, x_length/2, i/nx),
-                    y_pos = lerp(-y_length/2, y_length/2, j/ny))
-                [x_pos, y_pos, 0]
-    ];
+    module solid3D_raw() {
+        // Vertex indexing for a (nx+1) x (ny+1) grid
+        function vid(i, j) = i + (nx+1)*j;
+        function top_vid(i, j) = vid(i, j);
+        function bot_vid(i, j) = (nx+1)*(ny+1) + vid(i, j);
 
-    // Top surface triangles (CCW when viewed from outside / above)
-    top_faces = [
-        for (j=[0:ny-1])
+        // Center the solid on the origin in XY:
+        // x in [-x_length/2, +x_length/2], y in [-y_length/2, +y_length/2]
+        top_pts = [
+            for (j=[0:ny])
+                for (i=[0:nx])
+                    let(x_pos = lerp(-x_length/2, x_length/2, i/nx),
+                        y_pos = lerp(-y_length/2, y_length/2, j/ny),
+                        xm    = x_math_from_mm(x_pos + x_length/2),
+                        ym    = y_math_from_mm(y_pos + y_length/2),
+                        z     = z_surface_mm(xm, ym))
+                    [x_pos, y_pos, z]
+        ];
+
+        bot_pts = [
+            for (j=[0:ny])
+                for (i=[0:nx])
+                    let(x_pos = lerp(-x_length/2, x_length/2, i/nx),
+                        y_pos = lerp(-y_length/2, y_length/2, j/ny))
+                    [x_pos, y_pos, z_floor]
+        ];
+
+        // Sampled top height at grid vertex (i,j). Used for robust triangulation.
+        function z_at(i, j) =
+            let(x_pos = lerp(-x_length/2, x_length/2, i/nx),
+                y_pos = lerp(-y_length/2, y_length/2, j/ny),
+                xm    = x_math_from_mm(x_pos + x_length/2),
+                ym    = y_math_from_mm(y_pos + y_length/2))
+            z_surface_mm(xm, ym);
+
+        // Top surface triangles (CCW when viewed from outside / above)
+        top_faces = [
+            for (j=[0:ny-1])
+                for (i=[0:nx-1])
+                    let(h00 = z_at(i, j),
+                        h10 = z_at(i+1, j),
+                        h01 = z_at(i, j+1),
+                        h11 = z_at(i+1, j+1),
+                        use_diag_00_11 = (h00 + h11) >= (h10 + h01),
+                        v00 = top_vid(i, j),
+                        v10 = top_vid(i+1, j),
+                        v01 = top_vid(i, j+1),
+                        v11 = top_vid(i+1, j+1))
+                    each (
+                        use_diag_00_11
+                            ? [ [v00, v10, v11], [v00, v11, v01] ]
+                            : [ [v00, v10, v01], [v10, v11, v01] ]
+                    )
+        ];
+
+        // Bottom surface triangles (reverse winding so normal points downward)
+        bot_faces = [
+            for (j=[0:ny-1])
+                for (i=[0:nx-1])
+                    each [
+                        [ bot_vid(i, j+1),   bot_vid(i+1, j),   bot_vid(i, j) ],
+                        [ bot_vid(i, j+1),   bot_vid(i+1, j+1), bot_vid(i+1, j) ]
+                    ]
+        ];
+
+        // Side walls around the perimeter
+        front_faces = [
             for (i=[0:nx-1])
                 each [
-                    [ top_vid(i, j),     top_vid(i+1, j),   top_vid(i, j+1) ],
-                    [ top_vid(i+1, j),   top_vid(i+1, j+1), top_vid(i, j+1) ]
+                    [ bot_vid(i, 0),   bot_vid(i+1, 0), top_vid(i+1, 0) ],
+                    [ bot_vid(i, 0),   top_vid(i+1, 0), top_vid(i, 0) ]
                 ]
-    ];
+        ];
 
-    // Bottom surface triangles (reverse winding so normal points downward)
-    bot_faces = [
-        for (j=[0:ny-1])
+        back_faces = [
             for (i=[0:nx-1])
                 each [
-                    [ bot_vid(i, j+1),   bot_vid(i+1, j),   bot_vid(i, j) ],
-                    [ bot_vid(i, j+1),   bot_vid(i+1, j+1), bot_vid(i+1, j) ]
+                    [ bot_vid(i+1, ny), bot_vid(i, ny),   top_vid(i, ny) ],
+                    [ bot_vid(i+1, ny), top_vid(i, ny),   top_vid(i+1, ny) ]
                 ]
-    ];
+        ];
 
-    // Side walls around the perimeter
-    front_faces = [
-        for (i=[0:nx-1])
-            each [
-                [ bot_vid(i, 0),   bot_vid(i+1, 0), top_vid(i+1, 0) ],
-                [ bot_vid(i, 0),   top_vid(i+1, 0), top_vid(i, 0) ]
-            ]
-    ];
+        left_faces = [
+            for (j=[0:ny-1])
+                each [
+                    [ bot_vid(0, j+1), bot_vid(0, j),   top_vid(0, j) ],
+                    [ bot_vid(0, j+1), top_vid(0, j),   top_vid(0, j+1) ]
+                ]
+        ];
 
-    back_faces = [
-        for (i=[0:nx-1])
-            each [
-                [ bot_vid(i+1, ny), bot_vid(i, ny),   top_vid(i, ny) ],
-                [ bot_vid(i+1, ny), top_vid(i, ny),   top_vid(i+1, ny) ]
-            ]
-    ];
+        right_faces = [
+            for (j=[0:ny-1])
+                each [
+                    [ bot_vid(nx, j),   bot_vid(nx, j+1), top_vid(nx, j+1) ],
+                    [ bot_vid(nx, j),   top_vid(nx, j+1), top_vid(nx, j) ]
+                ]
+        ];
 
-    left_faces = [
-        for (j=[0:ny-1])
-            each [
-                [ bot_vid(0, j+1), bot_vid(0, j),   top_vid(0, j) ],
-                [ bot_vid(0, j+1), top_vid(0, j),   top_vid(0, j+1) ]
-            ]
-    ];
+        polyhedron(
+            points = concat(top_pts, bot_pts),
+            faces  = concat(top_faces, bot_faces, front_faces, back_faces, left_faces, right_faces),
+            convexity = 10
+        );
+    }
 
-    right_faces = [
-        for (j=[0:ny-1])
-            each [
-                [ bot_vid(nx, j),   bot_vid(nx, j+1), top_vid(nx, j+1) ],
-                [ bot_vid(nx, j),   top_vid(nx, j+1), top_vid(nx, j) ]
-            ]
-    ];
-
-    polyhedron(
-        points = concat(top_pts, bot_pts),
-        faces  = concat(top_faces, bot_faces, front_faces, back_faces, left_faces, right_faces),
-        convexity = 10
-    );
+    // Clip to the positive-z half-space.
+    // Use render() in preview mode to avoid OpenCSG artifacts.
+    clip_pad = 2;
+    if ($preview)
+        render(convexity=10)
+            intersection() {
+                solid3D_raw();
+                translate([-x_length/2 - clip_pad, -y_length/2 - clip_pad, 0])
+                    cube([x_length + 2*clip_pad, y_length + 2*clip_pad, 100000], center=false);
+            }
+    else
+        intersection() {
+            solid3D_raw();
+            translate([-x_length/2 - clip_pad, -y_length/2 - clip_pad, 0])
+                cube([x_length + 2*clip_pad, y_length + 2*clip_pad, 100000], center=false);
+        }
 }
 
 ///////////////////////////////////////////////////////////////
@@ -647,8 +700,12 @@ if (MODE=="slice_x") {
 } else if (MODE=="all_slices_y") {
     all_slices_assembled("y");
 } else if (MODE=="all_slices_z") {
+    if (z_max <= 0)
+        echo("Surface never rises above z=0; clipped solid will be empty. Increase z_buffer or change f(x,y).", z_max=z_max);
     all_slices_z();
 } else if (MODE=="solid") {
+    if (z_max <= 0)
+        echo("Surface never rises above z=0; clipped solid will be empty. Increase z_buffer or change f(x,y).", z_max=z_max);
     solid3D();
 } else {
     echo("Unknown MODE. Use: slice_x | slice_y | stand_x | stand_y | all_slices_x | all_slices_y | all_slices_z | solid");

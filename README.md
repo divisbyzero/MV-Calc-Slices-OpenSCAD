@@ -117,6 +117,8 @@ In terms of the math-defined height in millimeters,
 - surface height used for the solid is:
    - `z_solid_mm(x,y) = z_buffer + f_mm(x,y)`
 
+The generated 3D solid only includes the portion of this surface **above the XY plane** (`z>=0`). If the surface dips below `z=0`, those regions contribute no volume.
+
 Slice profiles (used by `MODE="slice_*"` and also by the assembled modes) use the same height map:
 
 - `z_slice_mm(x,y) = z_solid_mm(x,y)`
