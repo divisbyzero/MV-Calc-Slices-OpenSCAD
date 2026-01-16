@@ -66,7 +66,7 @@ stand_locations = [0.5];  // locations for the stands: for instance, stand_locat
 //////
 x_length   = 80;        // mm - size of the final object in X direction
 // y_length is computed to maintain the correct aspect ratio based on x_span and y_span
-slice_thickness = 2.0;   // mm 
+slice_thickness = 1.5;   // mm 
 clearance       = 0.25;  // mm - slot fit tolerance (for MODE="slice_x", "slice_y", "stand_x", "stand_y")
 stand_height   = 15;         // mm - height of the slice stands (for MODE="slice_x", "slice_y", "stand_x", "stand_y", "all_slices_x", "all_slices_y")
 stand_margin  = 0;       // mm - distance the stand extends beyond the last slice (for MODE="stand_x", "stand_y")
