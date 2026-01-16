@@ -1,14 +1,11 @@
 ///////////////////////////////////////////////////////////////
-// TRACE SLICES + STAND (single-file workflow)
-// Updated per request:
-//  - Slice has TWO bottom slots at 1/4 and 3/4 along length
-//  - Slice and stand have SAME thickness = slice_thickness
-//  - Slot opening width (mating) = slice_thickness + clearance
+// MULTIVARIABLE CALCULUS SURFACE SLICER
 ///////////////////////////////////////////////////////////////
 
-//////////////////// USER PARAMETERS //////////////////////////
-
 ///////////////////////////////////////////////////////////////
+///////////////////////// PARAMETERS //////////////////////////
+///////////////////////////////////////////////////////////////
+
 MODE = "solid";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "solid"
                          // "slice_x" produces a slice in which x=constant
                          // "slice_y" produces a slice in which y=constant
@@ -17,78 +14,69 @@ MODE = "solid";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "sol
                          // "solid" produces the full 3D surface solid
 
 //////
-// Function definition and parameters
+// The function
 //////
 // Note: sin_rad, cos_rad, tan_rad are trig functions that accept radians
-//function f(x,y) = x*x - y*y;
-function f(x,y) =
-    let(r = sqrt(x*x + y*y))
-    (r == 0) ? 2 : 2*sin_rad(r)/r;
+function f(x,y) = 1.25*(x*x - y*y);
+//function f(x,y) = let(r = sqrt(x*x + y*y))(r == 0) ? 2 : 2*sin_rad(r)/r; //use xmin=ymin=-10 and x_span=y_span=20
 
 // Domain: [xmin,xmin+x_span] x [ymin,ymin+y_span]
-xmin       = -10;         // math x-min
-ymin       = -10;         // math y-min
-x_span     = 20;          // math width in x-direction
-y_span     = 20;          // math width in y-direction
+xmin       = -2;         // math x-min
+ymin       = -2;         // math y-min
+x_span     = 4;          // math width in x-direction
+y_span     = 4;          // math width in y-direction
 n_samples  = 180;        // curve sampling resolution
-
-//////
-// Solid (full surface) parameters
-//////
 solid_nx   = 120;        // surface sampling in X (higher = smoother, slower)
 solid_ny   = 120;        // surface sampling in Y (higher = smoother, slower)
 
 //////
 // Slice parameters
 //////
-numslices  = 11;          // number of traces
-k          = 6;          // slice number to generate: 1...numslices
-slice_thickness = 3.0;   // mm 
-clearance       = 0.25;  // mm — fit tolerance
+numslices  = 7;          // number of traces
+k          = 4;          // slice number to generate: 1...numslices
 
 //////
 // Size parameters
 //////
-// Physical size of the final object
-x_length   = 100;        // mm
-y_length   = 100;        // mm
+x_length   = 100;        // mm - size of the final object in X direction
+y_length   = 100;        // mm - size of the final object in Y direction
+slice_thickness = 3.0;   // mm 
+clearance       = 0.25;  // mm - slot fit tolerance
+stand_margin  = 6;       // mm - distance the stand extends beyond the last slice
 
-// Vertical scaling:
-// 1) z_scale * f(x,y) is the function value in mm
-// 2) z_min is the minimum of (z_scale*f) over the domain (estimated by sampling)
-// 3) z_buffer is an additional lift above the minimum
-// 4) Solid: z = (-2*z_min) + z_buffer + 2*z_scale*f(x,y)
-//    Slice: z = (-2*z_min) + z_buffer + 2*z_scale*f(x,y) + 2*slot_h
+//////
+// Slot parameters
+//////
+slot_h     = 20;          // mm — height of slots cut into slices and stands
+slot_positions = [0.5]; // slot placement: for instance, slot_positions = [0.25, 0.75] would yield slots at 1/4 and 3/4 of the slice length.
+
+// Vertical scaling from math units to mm
+// z_scale * f(x,y) is the function value in mm
+// z_min is the minimum of z_scale*f over the domain 
+// z_buffer is an additional vertical translation above the minimum
+//    Solid: z = -z_min + z_buffer + z_scale*f(x,y)
+//    Slice: z = -z_min + z_buffer + z_scale*f(x,y) + 2*slot_h
 z_scale    = 10;         // mm per math-unit
 z_buffer   = 0;          // mm
 zmin_nx    = 80;         // sampling resolution for z_min estimate (x)
 zmin_ny    = 80;         // sampling resolution for z_min estimate (y)
 
-//////
-// Slot parameters
-//////
-// Slots are located as described. For instance, slot_positions = [0.25, 0.75] would yield slots at 1/4 and 3/4 of the slice length.
-slot_h     = 20;          // mm — height of the slice notch
-slot_positions = [0.5];
+///////////////////////////////////////////////////////////////
+//////////////////////////// CODE /////////////////////////////
+///////////////////////////////////////////////////////////////
+
+// Stand height is 2*slot_h; slots cut down from the top by slot_h.
+stand_height  = 2*slot_h;
+stand_N       = numslices;         // positions
+
 
 // Slot opening (in the mating direction) = slice thickness + clearance
 slot_opening_w = slice_thickness + clearance;
 
-//////
-// Stand parameters
-//////
-// Height is 2*slot_h; slots cut down from the top by slot_h.
-stand_height  = 2*slot_h;
-stand_margin  = 6;                 // mm extra length beyond the slice length on both ends
-stand_N       = numslices;         // positions
-
-
-///////////////////////////////////////////////////////////////
-// Helpers
 function lerp(a,b,t) = a + (b-a)*t;
 function clamp(v, lo, hi) = (v<lo)?lo : (v>hi)?hi : v;
 
-// Trig helpers that accept radians (OpenSCAD's sin/cos/tan take degrees)
+// Trig functions that accept radians (OpenSCAD's sin/cos/tan take degrees)
 function rad2deg(r) = r * 180 / PI;
 function sin_rad(r) = sin(rad2deg(r));
 function cos_rad(r) = cos(rad2deg(r));
@@ -133,7 +121,7 @@ function z_min_raw() =
 z_min = z_min_raw();
 
 // Solid Z and slice Z as requested
-function z_solid_mm(xm, ym) = (-2*z_min) + z_buffer + 2*f_mm(xm, ym);
+function z_solid_mm(xm, ym) = (-z_min) + z_buffer + f_mm(xm, ym);
 function z_slice_mm(xm, ym) = z_solid_mm(xm, ym) + 2*slot_h;
 
 // Backwards-compatible list reverse (also fine on new versions)
