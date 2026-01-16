@@ -28,5 +28,5 @@ function preset_params() = [
 function preset_column_params() = [
     3,
     3,
-    []
+    [[0,0]]
 ];

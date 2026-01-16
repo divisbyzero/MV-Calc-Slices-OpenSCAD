@@ -26,8 +26,8 @@ MODE = "all_slices_z";          // "slice_x" | "slice_y" | "stand_x" | "stand_y"
 // Uncomment exactly one of these files
 // Use no_presets.scad if you plan to enter your own function and custom parameters
 //include <no_presets.scad>;
-//include <hyperbolic_paraboloid.scad>;
-include <elliptic_paraboloid.scad>;
+include <hyperbolic_paraboloid.scad>;
+//include <elliptic_paraboloid.scad>;
 //include <sombrero.scad>;
 
 // Custom parameters
@@ -164,8 +164,21 @@ function z_min_raw() =
                 f_mm(xm, ym)
     ]);
 
+// Estimate maximum of f_mm over the domain by sampling
+function z_max_raw() =
+    max([
+        for (j=[0:zmin_ny])
+            for (i=[0:zmin_nx])
+                let(xm = lerp(xmin_eff, xmin_eff + x_span_eff, i/zmin_nx),
+                    ym = lerp(ymin_eff, ymin_eff + y_span_eff, j/zmin_ny))
+                f_mm(xm, ym)
+    ]);
+
 // "z_min" per your definition: minimum of z_scale*f(x,y) over the domain (mm)
 z_min = z_min_raw();
+
+// Max height (mm) after applying the same vertical shift as the solid
+z_max = (-z_min) + z_buffer_eff + z_max_raw();
 
 // Solid Z and slice Z as requested
 function z_solid_mm(xm, ym) = (-z_min) + z_buffer_eff + f_mm(xm, ym);
@@ -456,43 +469,149 @@ module all_slices_z() {
     cut_x = x_length + 2*cut_pad;
     cut_y = y_length + 2*cut_pad;
 
-    // Top cutoff ensures we end up with exactly numslices slabs.
+    // Choose how many slabs are needed to reach the top of the surface.
     // Slab i spans z in [i*dz_mm, i*dz_mm + slab_t].
-    z_top = (numslices<=1) ? 1e9 : ((numslices-1)*dz_mm + slab_t);
+    n_slabs = (dz_mm <= 0) ? 1 : max(1, ceil((z_max - slab_t)/dz_mm) + 1);
+
+    // Top cutoff ensures we end up with exactly n_slabs slabs.
+    z_top = (n_slabs<=1) ? 1e9 : ((n_slabs-1)*dz_mm + slab_t);
 
     module sliced_slabs() {
         difference() {
             solid3D();
 
             // Delete horizontal gaps between slabs
-            if (numslices>1 && z_gap>0) {
-                for (i=[0:numslices-2]) {
+            if (n_slabs>1 && z_gap>0) {
+                for (i=[0:n_slabs-2]) {
                     translate([-x_length/2 - cut_pad, -y_length/2 - cut_pad, i*dz_mm + slab_t])
                         cube([cut_x, cut_y, z_gap], center=false);
                 }
             }
 
             // Delete everything above the top slab so there are exactly numslices pieces
-            if (numslices>1) {
+            if (n_slabs>1) {
                 translate([-x_length/2 - cut_pad, -y_length/2 - cut_pad, z_top])
                     cube([cut_x, cut_y, 10000], center=false);
             }
         }
     }
 
-    module columns_up_to(z_height) {
-        if (column_size_x_eff > 0 && column_size_y_eff > 0 && len(column_centers_mm_eff) > 0) {
+    // Columns: a solid over a rectangular base footprint, under the surface,
+    // and capped at the top of the highest *remaining* horizontal slice at each (x,y).
+    // This avoids columns extending into the deleted gap regions.
+    function slab_cap_z(z) =
+        (dz_mm <= 0) ? z :
+        min(z, floor(z/dz_mm)*dz_mm + slab_t);
+
+    function column_top_z_at(x_pos, y_pos) =
+        let(x_mm = clamp(x_pos + x_length/2, 0, x_length),
+            y_mm = clamp(y_pos + y_length/2, 0, y_length),
+            xm   = x_math_from_mm(x_mm),
+            ym   = y_math_from_mm(y_mm),
+            z    = max(0, z_solid_mm(xm, ym)),
+            zcap = slab_cap_z(z))
+        min(z_top, zcap);
+
+    module column_capped_under_surface(cx, cy, z_height) {
+        // Sampling resolution for the column top surface
+        nx = 16;
+        ny = 16;
+
+        x0 = cx - column_size_x_eff/2;
+        x1 = cx + column_size_x_eff/2;
+        y0 = cy - column_size_y_eff/2;
+        y1 = cy + column_size_y_eff/2;
+
+        function vid(i, j) = i + (nx+1)*j;
+        function top_vid(i, j) = vid(i, j);
+        function bot_vid(i, j) = (nx+1)*(ny+1) + vid(i, j);
+
+        top_pts = [
+            for (j=[0:ny])
+                for (i=[0:nx])
+                    let(x_pos = lerp(x0, x1, i/nx),
+                        y_pos = lerp(y0, y1, j/ny),
+                        zpos  = min(z_height, column_top_z_at(x_pos, y_pos)))
+                    [x_pos, y_pos, zpos]
+        ];
+
+        bot_pts = [
+            for (j=[0:ny])
+                for (i=[0:nx])
+                    let(x_pos = lerp(x0, x1, i/nx),
+                        y_pos = lerp(y0, y1, j/ny))
+                    [x_pos, y_pos, 0]
+        ];
+
+        top_faces = [
+            for (j=[0:ny-1])
+                for (i=[0:nx-1])
+                    each [
+                        [ top_vid(i, j),     top_vid(i+1, j),   top_vid(i, j+1) ],
+                        [ top_vid(i+1, j),   top_vid(i+1, j+1), top_vid(i, j+1) ]
+                    ]
+        ];
+
+        bot_faces = [
+            for (j=[0:ny-1])
+                for (i=[0:nx-1])
+                    each [
+                        [ bot_vid(i, j+1),   bot_vid(i+1, j),   bot_vid(i, j) ],
+                        [ bot_vid(i, j+1),   bot_vid(i+1, j+1), bot_vid(i+1, j) ]
+                    ]
+        ];
+
+        front_faces = [
+            for (i=[0:nx-1])
+                each [
+                    [ bot_vid(i, 0),   bot_vid(i+1, 0), top_vid(i+1, 0) ],
+                    [ bot_vid(i, 0),   top_vid(i+1, 0), top_vid(i, 0) ]
+                ]
+        ];
+
+        back_faces = [
+            for (i=[0:nx-1])
+                each [
+                    [ bot_vid(i+1, ny), bot_vid(i, ny),   top_vid(i, ny) ],
+                    [ bot_vid(i+1, ny), top_vid(i, ny),   top_vid(i+1, ny) ]
+                ]
+        ];
+
+        left_faces = [
+            for (j=[0:ny-1])
+                each [
+                    [ bot_vid(0, j+1), bot_vid(0, j),   top_vid(0, j) ],
+                    [ bot_vid(0, j+1), top_vid(0, j),   top_vid(0, j+1) ]
+                ]
+        ];
+
+        right_faces = [
+            for (j=[0:ny-1])
+                each [
+                    [ bot_vid(nx, j),   bot_vid(nx, j+1), top_vid(nx, j+1) ],
+                    [ bot_vid(nx, j),   top_vid(nx, j+1), top_vid(nx, j) ]
+                ]
+        ];
+
+        polyhedron(
+            points = concat(top_pts, bot_pts),
+            faces  = concat(top_faces, bot_faces, front_faces, back_faces, left_faces, right_faces),
+            convexity = 10
+        );
+    }
+
+    module columns_capped(z_height) {
+        if (column_size_x_eff > 0 && column_size_y_eff > 0 && len(column_centers_mm_eff) > 0 && z_height > 0) {
             for (c = column_centers_mm_eff) {
-                translate([c[0] - column_size_x_eff/2, c[1] - column_size_y_eff/2, 0])
-                    cube([column_size_x_eff, column_size_y_eff, z_height], center=false);
+                column_capped_under_surface(c[0], c[1], z_height);
             }
         }
     }
 
     union() {
         sliced_slabs();
-        if (numslices>1)
-            columns_up_to(z_top);
+        if (n_slabs>1)
+            columns_capped(z_top);
     }
 }
 

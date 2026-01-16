@@ -65,7 +65,7 @@ Note on placement:
 - `MODE="slice_*"` and `MODE="stand_*"` are oriented/placed in the first quadrant for easy STL exporting/printing.
 - `MODE="solid"` and `MODE="all_slices_*"` are centered on the origin in XY (e.g. with `x_length=80`, `x` runs from `-40` to `+40`).
 
-For `MODE="all_slices_z"`, the bottom slab sits on the XY plane (`z=0`). Each slab has thickness `slice_thickness`, and the current vertical pitch rule is based on the X-direction slice spacing (approximately `x_length/(numslices-1)` mm).
+For `MODE="all_slices_z"`, the bottom slab sits on the XY plane (`z=0`). Each slab has thickness `slice_thickness`, the vertical pitch rule is based on the X-direction slice spacing (approximately `x_length/(numslices-1)` mm), and the number of slabs is computed automatically from the sampled maximum height of the surface.
 
 `MODE="all_slices_z"` also supports optional vertical columns (useful as built-in supports). In [Slices.scad](Slices.scad), set:
 
@@ -73,6 +73,8 @@ For `MODE="all_slices_z"`, the bottom slab sits on the XY plane (`z=0`). Each sl
 - `column_centers_mm = [[x0,y0], [x1,y1], ...]`
 
 Column centers are in the model’s XY coordinates (mm), where the solid is centered on the origin.
+
+The columns are generated as solids above each rectangular base footprint, under the surface, and capped at the top of the highest remaining horizontal slice (so their tops may be curved, and they will not extend into the deleted gap regions).
 
 When using a preset surface file, the column settings come from that preset file’s `preset_column_params()`.
 

@@ -26,9 +26,9 @@ function preset_params() = [
 
 // Optional columns for MODE="all_slices_z": [column_size_x, column_size_y, column_centers_mm]
 function preset_column_params() = [
-    6,
     3,
-    [[-37,0],[37,0]]
+    3,
+    [[-38.5,0],[38.5,0]]
 ];
 
 // Backwards-compatible aliases (older Slices.scad versions)
