@@ -2,20 +2,12 @@
 // MULTIVARIABLE CALCULUS SURFACE SLICER
 ///////////////////////////////////////////////////////////////
 
-// Preset surface files
-//
-// Workflow:
-// - Pick exactly ONE of the include lines below (leave the others commented).
-// - Then set SOURCE = "FROM_FILE" to use that preset's surface + parameters.
-// - Or set SOURCE = "CUSTOM" to use the custom function/parameters below.
-//
-// Default preset (safe fallback)
-include <preset_none.scad>;
-// include <hyperbolic_paraboloid.scad>;
 
 ///////////////////////////////////////////////////////////////
 ///////////////////////// PARAMETERS //////////////////////////
 ///////////////////////////////////////////////////////////////
+
+
 
 MODE = "all_slices_y";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all_slices_x" | "all_slices_y" | "solid"
                          // "slice_x" produces a slice in which x=constant
@@ -31,28 +23,32 @@ MODE = "all_slices_y";          // "slice_x" | "slice_y" | "stand_x" | "stand_y"
 // The function and (math-domain / scaling) parameters
 //////
 
-// Choose where the surface + domain/scaling come from:
-// - "CUSTOM": use f_user(x,y) and the xmin/ymin/... values below.
-// - "FROM_FILE": use preset_f(x,y) and preset_params() from the one included preset file.
-SOURCE = "CUSTOM"; // "CUSTOM" | "FROM_FILE"
+// Uncomment exactly one of these files
+// Use no_presets.scad if you plan to enter your own function and custom parameters
+include <no_presets.scad>;
+// include <hyperbolic_paraboloid.scad>;
 
-// Custom function (only used when SOURCE="CUSTOM")
-// Note: sin_rad, cos_rad, tan_rad are trig functions that accept radians
-function f_user(x,y) = 1.25*(x*x - y*y);
-//function f_user(x,y) = let(r = sqrt(x*x + y*y))(r == 0) ? 2 : 2*sin_rad(r)/r; //use xmin=ymin=-10 and x_span=y_span=20
 
-// Custom parameters (only used when SOURCE="CUSTOM")
-// Domain: [xmin_user,xmin_user+x_span_user] x [ymin_user,ymin_user+y_span_user]
-xmin_user       = -2;         // math x-min
-ymin_user       = -2;         // math y-min
-x_span_user     = 4;          // math width in x-direction
-y_span_user     = 4;          // math width in y-direction
+//function f_custom(x,y) = let(r = sqrt(x*x + y*y))(r == 0) ? 2 : 2*sin_rad(r)/r; //use xmin=ymin=-10 and x_span=y_span=20
+
+// Custom parameters
+// These only apply when using: include <no_presets.scad>;
+// Custom function
+function f_custom(x,y) = 1.25*(x*x - y*y); // Note: sin_rad, cos_rad, tan_rad are trig functions that accept radians
+
+// Domain: [xmin_custom,xmin_custom+x_span_custom] x [ymin_custom,ymin_custom+y_span_custom]
+xmin_custom       = -2;         // math x-min
+ymin_custom       = -2;         // math y-min
+x_span_custom     = 4;          // math width in x-direction
+y_span_custom     = 4;          // math width in y-direction
 // Function in mm: z = -z_min + z_buffer + z_scale*f(x,y)
 // z_min is the minimum of z_scale*f over the domain
-z_scale_user    = 10;         // mm - z_scale * f(x,y) is the function value in mm
-z_buffer_user   = 5;          // mm - additional vertical translation above the minimum
+z_scale_custom    = 10;         // mm - z_scale * f(x,y) is the function value in mm
+z_buffer_custom   = 5;          // mm - additional vertical translation above the minimum
                          // z_buffer=0 will put the lowest point of the surface at z=0
                          // z_buffer=stand_height will put the lowest point at the top of the stand
+// End custom parameters
+// The parameters below can apply to any model
 
 //////
 // Slice parameters
@@ -73,8 +69,8 @@ stand_margin  = 0;       // mm - distance the stand extends beyond the last slic
 
 
 // Parameter bundle selected by SOURCE.
-params_user = [xmin_user, ymin_user, x_span_user, y_span_user, z_scale_user, z_buffer_user];
-params = (SOURCE=="FROM_FILE") ? preset_params() : params_user;
+params_custom = [xmin_custom, ymin_custom, x_span_custom, y_span_custom, z_scale_custom, z_buffer_custom];
+params = (SOURCE=="FROM_FILE") ? preset_params() : params_custom;
 
 // Selected (effective) parameters used by the rest of the file.
 // Domain: [xmin,xmin+x_span] x [ymin,ymin+y_span]
@@ -99,7 +95,7 @@ solid_ny   = 120;        // surface sampling in Y (higher = smoother, slower)
 ///////////////////////////////////////////////////////////////
 
 // Selected surface function
-function f(x,y) = (SOURCE=="FROM_FILE") ? preset_f(x,y) : f_user(x,y);
+function f(x,y) = (SOURCE=="FROM_FILE") ? preset_f(x,y) : f_custom(x,y);
 
 
 // Stand height is 2*slot_h; slots cut down from the top by slot_h.

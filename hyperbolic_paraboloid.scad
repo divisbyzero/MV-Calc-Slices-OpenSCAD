@@ -2,16 +2,19 @@
 //
 // This file is intended to be loaded from Slices.scad via:
 //   include <hyperbolic_paraboloid.scad>;
-// (and with SOURCE="FROM_FILE").
+//
+// It sets SOURCE="FROM_FILE" so the include alone selects the preset.
 //
 // Standard preset interface expected by Slices.scad:
 //   - function preset_f(x,y)
 //   - function preset_params() = [xmin,ymin,x_span,y_span,z_scale,z_buffer]
 
+SOURCE = "FROM_FILE";
+
 function preset_f(x, y) = 1.25*(x*x - y*y);
 
 // Default parameter suggestion for this preset.
-// Feel free to override by editing the custom values in Slices.scad (SOURCE="CUSTOM").
+// To use custom values instead, include no_presets.scad in Slices.scad.
 function preset_params() = [
     -2,  // xmin
     -2,  // ymin

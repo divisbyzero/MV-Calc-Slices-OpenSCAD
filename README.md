@@ -18,8 +18,9 @@ This repo supports preset surfaces defined in separate `.scad` files.
 
 - Preset file added: [hyperbolic_paraboloid.scad](hyperbolic_paraboloid.scad)
 - In [Slices.scad](Slices.scad):
-   - Pick a surface source with `SOURCE = "CUSTOM";` or `SOURCE = "FROM_FILE";`
-   - If using `SOURCE = "FROM_FILE"`, uncomment exactly one preset `include <...>;` line near the top.
+   - Uncomment exactly one preset `include <...>;` line near the top.
+     - For custom mode, include [no_presets.scad](no_presets.scad)
+     - For a preset surface, include that preset file (e.g. [hyperbolic_paraboloid.scad](hyperbolic_paraboloid.scad))
 
 Preset files use a simple, consistent interface:
 
@@ -57,7 +58,7 @@ The file’s last section automatically builds the geometry for the selected `MO
 
 ## Defining the function
 
-If using `SOURCE = "CUSTOM"`, edit the custom function near the top:
+If using custom mode (i.e. [no_presets.scad](no_presets.scad) is included), edit the custom function near the top:
 
 ```scad
 function f_user(x,y) = 0.75*(x*x - y*y);
@@ -82,7 +83,7 @@ These parameters control how math coordinates map to millimeters:
    - `z_scale_user` (mm per math unit)
    - `z_buffer_user` (mm)
 
-When using `SOURCE = "FROM_FILE"`, the domain/scaling parameters come from the selected preset file’s `preset_params()` instead of the `*_user` values.
+When using a preset surface file, the domain/scaling parameters come from that file’s `preset_params()` instead of the `*_user` values.
 
 Internally, the script estimates the minimum value of `z_scale*f(x,y)` over the domain and shifts everything upward so the model has a flat base at `z=0`.
 
@@ -187,7 +188,7 @@ If the fit is too tight, increase `clearance` (typical 0.15–0.40 mm depending 
 - **Surface looks faceted**: increase `solid_nx/solid_ny`.
 - **Slices have missing/not-visible slots**: try moving `slot_positions` inward (e.g. `[0.5]`), or increase `n_samples`. The script already computes an “effective” length so slots don’t land beyond the nonzero part of the slice, but extreme functions/domains can still benefit from tuning.
 - **Assembled model is hard to print**: try fewer slices (`numslices`), reduce `x_length/y_length`, or add additional stands via `slot_positions` for stability.
-- **Model appears shifted/scaled oddly**: re-check `xmin_user/ymin_user/x_span_user/y_span_user` vs `x_length/y_length` vs `z_scale_user` (or the preset’s `preset_params()` if using `SOURCE="FROM_FILE"`).
+- **Model appears shifted/scaled oddly**: re-check `xmin_user/ymin_user/x_span_user/y_span_user` vs `x_length/y_length` vs `z_scale_user` (or the preset’s `preset_params()` if using a preset file).
 
 ## Suggested classroom-friendly defaults
 
