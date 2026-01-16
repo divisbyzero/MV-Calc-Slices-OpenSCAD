@@ -71,6 +71,12 @@ clearance       = 0.25;  // mm - slot fit tolerance
 stand_height   = 15;         // mm - height of the slice stands
 stand_margin  = 0;       // mm - distance the stand extends beyond the last slice
 
+// Horizontal-slab pitch fudge (used by MODE="all_slices_z")
+// dz_base = x_length/(numslices-1). The actual pitch is:
+//   dz_mm = dz_base * slab_pitch_mult
+// Use this to avoid tiny top remnants by nudging the pitch slightly.
+slab_pitch_mult = 1.01;  // 1.00 = unchanged, 1.01 = 1% larger spacing
+
 
 // Parameter bundle selected by SOURCE.
 params_user = [xmin, ymin, x_span, y_span, z_scale, z_buffer];
@@ -457,7 +463,8 @@ module all_slices_assembled(const_axis) {
 // Spacing rule (as requested): use the same spacing as the X-direction slice spacing.
 // In this file, that spacing is x_length/(numslices-1) mm.
 module all_slices_z() {
-    dz_mm = (numslices<=1) ? x_length : (x_length/(numslices-1));
+    dz_base = (numslices<=1) ? x_length : (x_length/(numslices-1));
+    dz_mm = max(0.001, dz_base * slab_pitch_mult);
 
     // Keep slabs at exactly slice_thickness.
     slab_t = slice_thickness;

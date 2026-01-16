@@ -67,6 +67,10 @@ Note on placement:
 
 For `MODE="all_slices_z"`, the bottom slab sits on the XY plane (`z=0`). Each slab has thickness `slice_thickness`, the vertical pitch rule is based on the X-direction slice spacing (approximately `x_length/(numslices-1)` mm), and the number of slabs is computed automatically from the sampled maximum height of the surface.
 
+If you see a tiny “top remnant” slab, you can nudge the pitch via:
+
+- `slab_pitch_mult` (default `1.00`; try `1.01`)
+
 `MODE="all_slices_z"` also supports optional vertical columns (useful as built-in supports). In [Slices.scad](Slices.scad), set:
 
 - `column_size_x`, `column_size_y` (mm)
