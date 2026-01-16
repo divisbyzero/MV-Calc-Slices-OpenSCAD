@@ -76,9 +76,9 @@ In terms of the math-defined height in millimeters,
 
 So the minimum of `z_solid_mm` is `z_buffer`.
 
-Slice profiles (used by `MODE="slice_*"` and also by the assembled modes) use an extra lift:
+Slice profiles (used by `MODE="slice_*"` and also by the assembled modes) use the same height map:
 
-- `z_slice_mm(x,y) = z_solid_mm(x,y) + 2*slot_h`
+- `z_slice_mm(x,y) = z_solid_mm(x,y)`
 
 If your surface looks clipped or overly tall/flat, adjust `z_scale`.
 

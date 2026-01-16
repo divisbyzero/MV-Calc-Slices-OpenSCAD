@@ -27,9 +27,6 @@ xmin       = -2;         // math x-min
 ymin       = -2;         // math y-min
 x_span     = 4;          // math width in x-direction
 y_span     = 4;          // math width in y-direction
-n_samples  = 180;        // curve sampling resolution
-solid_nx   = 120;        // surface sampling in X (higher = smoother, slower)
-solid_ny   = 120;        // surface sampling in Y (higher = smoother, slower)
 
 //////
 // Slice parameters
@@ -53,15 +50,25 @@ stand_margin  = 0;       // mm - distance the stand extends beyond the last slic
 // z_min is the minimum of z_scale*f over the domain 
 // z_buffer is an additional vertical translation above the minimum
 //    Solid: z = -z_min + z_buffer + z_scale*f(x,y)
-//    Slice: z = -z_min + z_buffer + z_scale*f(x,y) + stand_height
+//    Slice: z = -z_min + z_buffer + z_scale*f(x,y)
 z_scale    = 10;         // mm per math-unit
-z_buffer   = -stand_height+5;          // mm
+z_buffer   = 5;          // mm 
+                         // z_buffer=0 will put the lowest point of the surface at z=0
+                         // z_buffer=stand_height will put the lowest point at the top of the stand
+
+// Sampling resolutions
 zmin_nx    = 80;         // sampling resolution for z_min estimate (x)
 zmin_ny    = 80;         // sampling resolution for z_min estimate (y)
+n_samples  = 180;        // curve sampling resolution
+solid_nx   = 120;        // surface sampling in X (higher = smoother, slower)
+solid_ny   = 120;        // surface sampling in Y (higher = smoother, slower)
 
 ///////////////////////////////////////////////////////////////
 //////////////////////////// CODE /////////////////////////////
 ///////////////////////////////////////////////////////////////
+
+
+
 
 // Stand height is 2*slot_h; slots cut down from the top by slot_h.
 stand_N       = numslices;         // positions
@@ -120,7 +127,7 @@ z_min = z_min_raw();
 
 // Solid Z and slice Z as requested
 function z_solid_mm(xm, ym) = (-z_min) + z_buffer + f_mm(xm, ym);
-function z_slice_mm(xm, ym) = z_solid_mm(xm, ym) + stand_height;
+function z_slice_mm(xm, ym) = z_solid_mm(xm, ym);
 
 // Backwards-compatible list reverse (also fine on new versions)
 function reverse_list(v) = [ for (i = [len(v)-1 : -1 : 0]) v[i] ];
