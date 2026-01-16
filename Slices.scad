@@ -6,11 +6,13 @@
 ///////////////////////// PARAMETERS //////////////////////////
 ///////////////////////////////////////////////////////////////
 
-MODE = "solid";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "solid"
+MODE = "all_slices_y";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all_slices_x" | "all_slices_y" | "solid"
                          // "slice_x" produces a slice in which x=constant
                          // "slice_y" produces a slice in which y=constant
                          // "stand_x" produces a stand for slice_x
                          // "stand_y" produces a stand for slice_y
+                         // "all_slices_x" produces the stand_x plus all slice_x pieces as a single model (no slots)
+                         // "all_slices_y" produces the stand_y plus all slice_y pieces as a single model (no slots)
                          // "solid" produces the full 3D surface solid
 
 //////
@@ -32,32 +34,28 @@ solid_ny   = 120;        // surface sampling in Y (higher = smoother, slower)
 //////
 // Slice parameters
 //////
-numslices  = 7;          // number of traces
+numslices  = 11;          // number of traces
 k          = 4;          // slice number to generate: 1...numslices
+slot_positions = [0.25, 0.75];  // slot placement(s) for the stand: for instance, slot_positions = [0.25, 0.75] would yield slots at 1/4 and 3/4 of the slice length.
 
 //////
 // Size parameters
 //////
-x_length   = 100;        // mm - size of the final object in X direction
-y_length   = 100;        // mm - size of the final object in Y direction
-slice_thickness = 3.0;   // mm 
+x_length   = 80;        // mm - size of the final object in X direction
+y_length   = 80;        // mm - size of the final object in Y direction
+slice_thickness = 2.0;   // mm 
 clearance       = 0.25;  // mm - slot fit tolerance
-stand_margin  = 6;       // mm - distance the stand extends beyond the last slice
-
-//////
-// Slot parameters
-//////
-slot_h     = 20;          // mm — height of slots cut into slices and stands
-slot_positions = [0.5]; // slot placement: for instance, slot_positions = [0.25, 0.75] would yield slots at 1/4 and 3/4 of the slice length.
+stand_height   = 15;         // mm - height of the slice stands
+stand_margin  = 0;       // mm - distance the stand extends beyond the last slice
 
 // Vertical scaling from math units to mm
 // z_scale * f(x,y) is the function value in mm
 // z_min is the minimum of z_scale*f over the domain 
 // z_buffer is an additional vertical translation above the minimum
 //    Solid: z = -z_min + z_buffer + z_scale*f(x,y)
-//    Slice: z = -z_min + z_buffer + z_scale*f(x,y) + 2*slot_h
+//    Slice: z = -z_min + z_buffer + z_scale*f(x,y) + stand_height
 z_scale    = 10;         // mm per math-unit
-z_buffer   = 0;          // mm
+z_buffer   = -stand_height+5;          // mm
 zmin_nx    = 80;         // sampling resolution for z_min estimate (x)
 zmin_ny    = 80;         // sampling resolution for z_min estimate (y)
 
@@ -66,8 +64,8 @@ zmin_ny    = 80;         // sampling resolution for z_min estimate (y)
 ///////////////////////////////////////////////////////////////
 
 // Stand height is 2*slot_h; slots cut down from the top by slot_h.
-stand_height  = 2*slot_h;
 stand_N       = numslices;         // positions
+slot_h     = stand_height/2;          // mm — height of slots cut into slices and stands
 
 
 // Slot opening (in the mating direction) = slice thickness + clearance
@@ -122,7 +120,7 @@ z_min = z_min_raw();
 
 // Solid Z and slice Z as requested
 function z_solid_mm(xm, ym) = (-z_min) + z_buffer + f_mm(xm, ym);
-function z_slice_mm(xm, ym) = z_solid_mm(xm, ym) + 2*slot_h;
+function z_slice_mm(xm, ym) = z_solid_mm(xm, ym) + stand_height;
 
 // Backwards-compatible list reverse (also fine on new versions)
 function reverse_list(v) = [ for (i = [len(v)-1 : -1 : 0]) v[i] ];
@@ -220,7 +218,7 @@ module solid3D(nx=solid_nx, ny=solid_ny) {
 // Extruded by slice_thickness.
 // const_axis == "x" => x is constant (x = xk), y varies along the slice
 // const_axis == "y" => y is constant (y = yk), x varies along the slice
-module slice2D_outline(k_=k, const_axis) {
+module slice2D_outline(k_=k, const_axis, slot_lift=true) {
     xk = xk_from_k(k_);
     yk = yk_from_k(k_);
     slice_len = slice_length_mm(const_axis);
@@ -230,7 +228,7 @@ module slice2D_outline(k_=k, const_axis) {
             let(s_mm = slice_len * i / n_samples,
                 xm   = (const_axis=="x") ? xk : x_math_from_mm(s_mm),
                 ym   = (const_axis=="x") ? y_math_from_mm(s_mm) : yk,
-                z    = z_slice_mm(xm, ym))
+                z    = slot_lift ? z_slice_mm(xm, ym) : z_solid_mm(xm, ym))
             [s_mm, z]
     ];
 
@@ -260,7 +258,7 @@ module slice3D(k_=k, const_axis) {
 
     difference() {
         linear_extrude(height = slice_thickness, center=false, convexity=10)
-            slice2D_outline(k_, const_axis);
+            slice2D_outline(k_, const_axis, slot_lift=true);
 
         // Two bottom slots (notches): opening width = slot_opening_w,
         // height = slot_h, centered at 1/4 and 3/4 of the length.
@@ -274,6 +272,20 @@ module slice3D(k_=k, const_axis) {
                 cube([ slot_opening_w, slot_h + 1, slice_thickness + 2 ], center=false);
         }
     }
+}
+
+// Slot-free slice, used for "all_slices_*" assembly.
+module slice3D_no_slots(k_=k, const_axis) {
+    linear_extrude(height = slice_thickness, center=false, convexity=10)
+    slice2D_outline(k_, const_axis, slot_lift=true);
+}
+
+// Upright slice oriented perpendicular to the upright stand:
+// - Stand lies in the YZ plane (thickness in X)
+// - Slice lies in the XZ plane (thickness in Y)
+module slice3D_upright_no_slots(k_=k, const_axis) {
+    rotate([90, 0, 0])
+        slice3D_no_slots(k_, const_axis);
 }
 
 ///////////////////////////////////////////////////////////////
@@ -314,6 +326,38 @@ module stand3D_for(const_axis) {
 module stand3D_x() stand3D_for("x");
 module stand3D_y() stand3D_for("y");
 
+// Upright, slot-free stand block for the one-piece assembly modes.
+module stand3D_upright_no_slots(const_axis) {
+    stand_len = slice_length_mm(const_axis) + 2*stand_margin;
+    translate([0, -stand_margin, 0])
+        cube([ slice_thickness, stand_len, stand_height ], center=false);
+}
+
+// One-piece assembly: upright stand + all slices, no slots.
+module all_slices_assembled(const_axis) {
+    slice_len = slice_length_mm(const_axis);
+    stand_len = slice_length_mm(const_axis) + 2*stand_margin;
+
+    function posY(i) =
+        (stand_N<=1) ? (stand_len/2) :
+        stand_margin + (stand_len - 2*stand_margin) * (i/(stand_N-1));
+
+    union() {
+        // Place one stand for each slot position along the slice length.
+        // Example: slot_positions=[0.5] centers the stand halfway along the slice.
+        for (p = slot_positions) {
+            translate([ p*slice_len - slice_thickness/2, 0, 0 ])
+                stand3D_upright_no_slots(const_axis);
+        }
+        for (i=[0:stand_N-1]) {
+            yc = posY(i);
+            // Center the slice thickness around yc (rotation makes extrusion go in -Y).
+            translate([0, yc + slice_thickness/2, 0])
+                slice3D_upright_no_slots(i+1, const_axis);
+        }
+    }
+}
+
 ///////////////////////////////////////////////////////////////
 // Build / preview
 if (MODE=="slice_x") {
@@ -324,8 +368,12 @@ if (MODE=="slice_x") {
     stand3D_x();
 } else if (MODE=="stand_y") {
     stand3D_y();
+} else if (MODE=="all_slices_x") {
+    all_slices_assembled("x");
+} else if (MODE=="all_slices_y") {
+    all_slices_assembled("y");
 } else if (MODE=="solid") {
     solid3D();
 } else {
-    echo("Unknown MODE. Use: slice_x | slice_y | stand_x | stand_y | solid");
+    echo("Unknown MODE. Use: slice_x | slice_y | stand_x | stand_y | all_slices_x | all_slices_y | solid");
 }

@@ -1,11 +1,14 @@
 # MV-Calc Slices (OpenSCAD)
 
-An OpenSCAD model for generating **3D-printable multivariable calculus surfaces** and **interlocking cross-section slices**.
+An OpenSCAD model for generating **3D-printable multivariable calculus surfaces** and either:
 
-- You define a function `f(x,y)` over a rectangular domain.
-- The script can generate:
-  - the full surface as a watertight solid (`MODE="solid"`), and/or
-  - a family of constant-\(x\) or constant-\(y\) slices (`MODE="slice_x"` / `MODE="slice_y"`) with matching stands (`MODE="stand_x"` / `MODE="stand_y"`).
+- a **modular** set of interlocking slices + stands, or
+- a **one-piece assembled** “stand + all slices” print.
+
+You define a function `f(x,y)` over a rectangular domain. The script can generate:
+
+- the full surface as a watertight solid (`MODE="solid"`), and/or
+- a family of constant-\(x\) or constant-\(y\) slices (`MODE="slice_x"` / `MODE="slice_y"`) with matching stands (`MODE="stand_x"` / `MODE="stand_y"`).
 
 Everything is parameterized in the top section of [Slices.scad](Slices.scad).
 
@@ -31,6 +34,8 @@ Set `MODE` to one of the following:
 - `"slice_y"`: a single slice with **y = constant** (x varies along the slice)
 - `"stand_x"`: stand that mates with `slice_x`
 - `"stand_y"`: stand that mates with `slice_y`
+- `"all_slices_x"`: one-piece assembled model: stand(s) + **all** `slice_x` slices (no slots)
+- `"all_slices_y"`: one-piece assembled model: stand(s) + **all** `slice_y` slices (no slots)
 
 The file’s last section automatically builds the geometry for the selected `MODE`.
 
@@ -61,6 +66,19 @@ These parameters control how math coordinates map to millimeters:
   - `z_scale` (mm per math unit)
 
 Internally, the script estimates the minimum value of `z_scale*f(x,y)` over the domain and shifts everything upward so the model has a flat base at `z=0`.
+
+In terms of the math-defined height in millimeters,
+
+- `f_mm(x,y) = z_scale * f(x,y)`
+- `z_min = min(f_mm)` over the sampled domain
+- surface height used for the solid is:
+   - `z_solid_mm(x,y) = -z_min + z_buffer + f_mm(x,y)`
+
+So the minimum of `z_solid_mm` is `z_buffer`.
+
+Slice profiles (used by `MODE="slice_*"` and also by the assembled modes) use an extra lift:
+
+- `z_slice_mm(x,y) = z_solid_mm(x,y) + 2*slot_h`
 
 If your surface looks clipped or overly tall/flat, adjust `z_scale`.
 
@@ -103,9 +121,25 @@ Pick one slice direction (you can do both, but start with one):
 
 Print the slices and the matching stand, then slide each slice into the corresponding slot.
 
+## Generating a one-piece assembled model (stand + all slices)
+
+If you want the “complete classroom object” as one STL (no assembly, no slots):
+
+1. Set:
+   - `MODE = "all_slices_x";` (or `"all_slices_y"`)
+2. Set `numslices`.
+3. Set `slot_positions` to control where the stand(s) sit along the slice length.
+   - Example: `slot_positions = [0.5];` places the stand halfway along every slice.
+   - Example: `slot_positions = [0.25, 0.75];` places two stands.
+4. **F6** render, then export STL.
+
+The assembled modes still use the same vertical shifting/lift as the individual slice profiles, but they omit the notch cutouts so everything is a single `union()`.
+
 ## Slot fit (tolerance) and layout
 
 Slots are cut into the bottom of each slice, and matching slots are cut into the stand.
+
+This section applies to `MODE="slice_*"` and `MODE="stand_*"`. The assembled modes (`MODE="all_slices_*"`) do **not** cut slots.
 
 Key parameters:
 
@@ -114,6 +148,8 @@ Key parameters:
 - `slot_h` (mm): slot depth/height
 - `slot_positions`: where along the slice length slots are placed
   - Example: `slot_positions = [0.25, 0.75];` places two slots at 1/4 and 3/4 of the slice length.
+
+In the assembled modes, `slot_positions` instead controls where the stand(s) are placed along the slice length.
 
 The actual slot opening used is:
 
@@ -131,6 +167,7 @@ If the fit is too tight, increase `clearance` (typical 0.15–0.40 mm depending 
 - **Render is slow**: lower `solid_nx/solid_ny` (solid) or `n_samples` (slices).
 - **Surface looks faceted**: increase `solid_nx/solid_ny`.
 - **Slices have missing/not-visible slots**: try moving `slot_positions` inward (e.g. `[0.5]`), or increase `n_samples`. The script already computes an “effective” length so slots don’t land beyond the nonzero part of the slice, but extreme functions/domains can still benefit from tuning.
+- **Assembled model is hard to print**: try fewer slices (`numslices`), reduce `x_length/y_length`, or add additional stands via `slot_positions` for stability.
 - **Model appears shifted/scaled oddly**: re-check `xmin/ymin/x_span/y_span` vs `x_length/y_length` vs `z_scale`.
 
 ## Suggested classroom-friendly defaults
