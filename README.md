@@ -17,9 +17,16 @@ Everything is parameterized in the top section of [Slices.scad](Slices.scad).
 This repo supports preset surfaces defined in separate `.scad` files.
 
 - Preset file added: [hyperbolic_paraboloid.scad](hyperbolic_paraboloid.scad)
-- In [Slices.scad](Slices.scad), set:
-   - `PRESET = "hyperbolic_paraboloid";` to use the preset’s `f(x,y)` and its default domain/scaling, or
-   - `PRESET = "custom";` to edit `f_custom(x,y)` plus `*_custom` parameters directly.
+- In [Slices.scad](Slices.scad):
+   - Pick a surface source with `SOURCE = "CUSTOM";` or `SOURCE = "FROM_FILE";`
+   - If using `SOURCE = "FROM_FILE"`, uncomment exactly one preset `include <...>;` line near the top.
+
+Preset files use a simple, consistent interface:
+
+```scad
+function preset_f(x,y) = ...;
+function preset_params() = [xmin, ymin, x_span, y_span, z_scale, z_buffer];
+```
 
 ## Requirements
 
@@ -50,10 +57,10 @@ The file’s last section automatically builds the geometry for the selected `MO
 
 ## Defining the function
 
-Edit the function near the top:
+If using `SOURCE = "CUSTOM"`, edit the custom function near the top:
 
 ```scad
-function f(x,y) = 0.75*(x*x - y*y);
+function f_user(x,y) = 0.75*(x*x - y*y);
 ```
 
 Notes:
@@ -67,12 +74,15 @@ Notes:
 These parameters control how math coordinates map to millimeters:
 
 - **Domain** (math units)
-  - `xmin`, `ymin`
-  - `x_span`, `y_span`
+   - `xmin_user`, `ymin_user`
+   - `x_span_user`, `y_span_user`
 - **Physical size** (mm)
   - `x_length`, `y_length`
 - **Vertical scaling**
-  - `z_scale` (mm per math unit)
+   - `z_scale_user` (mm per math unit)
+   - `z_buffer_user` (mm)
+
+When using `SOURCE = "FROM_FILE"`, the domain/scaling parameters come from the selected preset file’s `preset_params()` instead of the `*_user` values.
 
 Internally, the script estimates the minimum value of `z_scale*f(x,y)` over the domain and shifts everything upward so the model has a flat base at `z=0`.
 
@@ -89,7 +99,7 @@ Slice profiles (used by `MODE="slice_*"` and also by the assembled modes) use th
 
 - `z_slice_mm(x,y) = z_solid_mm(x,y)`
 
-If your surface looks clipped or overly tall/flat, adjust `z_scale`.
+If your surface looks clipped or overly tall/flat, adjust `z_scale_user` (or the preset’s `z_scale` in `preset_params()`).
 
 ## Generating a full surface solid
 
@@ -177,7 +187,7 @@ If the fit is too tight, increase `clearance` (typical 0.15–0.40 mm depending 
 - **Surface looks faceted**: increase `solid_nx/solid_ny`.
 - **Slices have missing/not-visible slots**: try moving `slot_positions` inward (e.g. `[0.5]`), or increase `n_samples`. The script already computes an “effective” length so slots don’t land beyond the nonzero part of the slice, but extreme functions/domains can still benefit from tuning.
 - **Assembled model is hard to print**: try fewer slices (`numslices`), reduce `x_length/y_length`, or add additional stands via `slot_positions` for stability.
-- **Model appears shifted/scaled oddly**: re-check `xmin/ymin/x_span/y_span` vs `x_length/y_length` vs `z_scale`.
+- **Model appears shifted/scaled oddly**: re-check `xmin_user/ymin_user/x_span_user/y_span_user` vs `x_length/y_length` vs `z_scale_user` (or the preset’s `preset_params()` if using `SOURCE="FROM_FILE"`).
 
 ## Suggested classroom-friendly defaults
 
