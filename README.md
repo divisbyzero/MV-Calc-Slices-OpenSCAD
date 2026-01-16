@@ -55,6 +55,7 @@ Set `MODE` to one of the following:
 - `"stand_y"`: stand that mates with `slice_y`
 - `"all_slices_x"`: one-piece assembled model: stand(s) + **all** `slice_x` slices (no slots)
 - `"all_slices_y"`: one-piece assembled model: stand(s) + **all** `slice_y` slices (no slots)
+- `"all_slices_z"`: proof-of-concept: full solid cut into `numslices` horizontal slabs by deleting thin horizontal boxes
 
 The file’s last section automatically builds the geometry for the selected `MODE`.
 
@@ -62,6 +63,8 @@ Note on placement:
 
 - `MODE="slice_*"` and `MODE="stand_*"` are oriented/placed in the first quadrant for easy STL exporting/printing.
 - `MODE="solid"` and `MODE="all_slices_*"` are centered on the origin in XY (e.g. with `x_length=80`, `x` runs from `-40` to `+40`).
+
+For `MODE="all_slices_z"`, the bottom slab sits on the XY plane (`z=0`). Each slab has thickness `slice_thickness`, and the current vertical pitch rule is based on the X-direction slice spacing (approximately `x_length/(numslices-1)` mm).
 
 ## Defining the function
 

@@ -8,13 +8,14 @@
 ///////////////////////////////////////////////////////////////
 
 // Choose the type of object to generate
-MODE = "all_slices_x";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all_slices_x" | "all_slices_y" | "solid"
+MODE = "all_slices_x";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all_slices_x" | "all_slices_y" | "all_slices_z" | "solid"
                          // "slice_x" produces a slice in which x=constant
                          // "slice_y" produces a slice in which y=constant
                          // "stand_x" produces a stand for slice_x
                          // "stand_y" produces a stand for slice_y
                          // "all_slices_x" produces the stand_x plus all slice_x pieces as a single model (no slots)
                          // "all_slices_y" produces the stand_y plus all slice_y pieces as a single model (no slots)
+                         // "all_slices_z" produces a solid cut into horizontal slices (proof-of-concept via deleting gap boxes)
                          // "solid" produces the full 3D surface solid
 
 
@@ -25,8 +26,8 @@ MODE = "all_slices_x";          // "slice_x" | "slice_y" | "stand_x" | "stand_y"
 // Uncomment exactly one of these files
 // Use no_presets.scad if you plan to enter your own function and custom parameters
 //include <no_presets.scad>;
-//include <hyperbolic_paraboloid.scad>;
-include <elliptic_paraboloid.scad>;
+include <hyperbolic_paraboloid.scad>;
+//include <elliptic_paraboloid.scad>;
 //include <sombrero.scad>;
 
 // Custom parameters
@@ -100,7 +101,7 @@ function f(x,y) = (SOURCE=="FROM_FILE") ? preset_f(x,y) : f_user(x,y);
 stand_N       = numslices;         // positions
 slot_h     = stand_height/2;          // mm — height of slots cut into slices and stands
 
-y_length   = x_length*y_span/x_span;        // mm - size of the final object in Y direction
+y_length   = x_length*y_span_eff/x_span_eff;        // mm - size of the final object in Y direction
 
 // Slot opening (in the mating direction) = slice thickness + clearance
 slot_opening_w = slice_thickness + clearance;
@@ -385,8 +386,8 @@ module all_slices_assembled(const_axis) {
     function slice_pos_mm(i) =
         (stand_N<=1) ? 0 :
         (const_axis=="x")
-            ? lerp(-x_length/2, x_length/2, i/(stand_N-1))
-            : lerp(-y_length/2, y_length/2, i/(stand_N-1));
+            ? lerp(-x_length/2 + slice_thickness/2, x_length/2 - slice_thickness/2, i/(stand_N-1))
+            : lerp(-y_length/2 + slice_thickness/2, y_length/2 - slice_thickness/2, i/(stand_N-1));
 
     union() {
         // Stands (beams)
@@ -416,10 +417,50 @@ module all_slices_assembled(const_axis) {
                     slice3D_upright_no_slots(i+1, "y");
             } else {
                 // slice_x: plane is YZ, thickness is X
-                translate([pos + slice_thickness/2, -slice_len/2, 0])
+                translate([pos - slice_thickness/2, -slice_len/2, 0])
                     rotate([90, 0, 90])
                         slice3D_no_slots(i+1, "x");
             }
+        }
+    }
+}
+
+// Proof-of-concept horizontal slicing:
+// Cut the full solid into numslices horizontal slabs by deleting thin horizontal boxes.
+// Spacing rule (as requested): use the same spacing as the X-direction slice spacing.
+// In this file, that spacing is x_length/(numslices-1) mm.
+module all_slices_z() {
+    dz_mm = (numslices<=1) ? x_length : (x_length/(numslices-1));
+
+    // Keep slabs at exactly slice_thickness.
+    slab_t = slice_thickness;
+    // Delete everything between slabs. If dz_mm <= slab_t, slabs will touch/overlap.
+    z_gap = max(0, dz_mm - slab_t);
+
+    // Cutting boxes need to fully cover the solid's XY footprint.
+    cut_pad = 2;
+    cut_x = x_length + 2*cut_pad;
+    cut_y = y_length + 2*cut_pad;
+
+    // Top cutoff ensures we end up with exactly numslices slabs.
+    // Slab i spans z in [i*dz_mm, i*dz_mm + slab_t].
+    z_top = (numslices<=1) ? 1e9 : ((numslices-1)*dz_mm + slab_t);
+
+    difference() {
+        solid3D();
+
+        // Delete horizontal gaps between slabs
+        if (numslices>1 && z_gap>0) {
+            for (i=[0:numslices-2]) {
+                translate([-x_length/2 - cut_pad, -y_length/2 - cut_pad, i*dz_mm + slab_t])
+                    cube([cut_x, cut_y, z_gap], center=false);
+            }
+        }
+
+        // Delete everything above the top slab so there are exactly numslices pieces
+        if (numslices>1) {
+            translate([-x_length/2 - cut_pad, -y_length/2 - cut_pad, z_top])
+                cube([cut_x, cut_y, 10000], center=false);
         }
     }
 }
@@ -438,8 +479,10 @@ if (MODE=="slice_x") {
     all_slices_assembled("x");
 } else if (MODE=="all_slices_y") {
     all_slices_assembled("y");
+} else if (MODE=="all_slices_z") {
+    all_slices_z();
 } else if (MODE=="solid") {
     solid3D();
 } else {
-    echo("Unknown MODE. Use: slice_x | slice_y | stand_x | stand_y | all_slices_x | all_slices_y | solid");
+    echo("Unknown MODE. Use: slice_x | slice_y | stand_x | stand_y | all_slices_x | all_slices_y | all_slices_z | solid");
 }
