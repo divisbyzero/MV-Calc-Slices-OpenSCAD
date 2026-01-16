@@ -65,7 +65,7 @@ stand_locations = [0.25, 0.75];  // locations for the stands: for instance, stan
 //////
 // Size parameters
 //////
-x_length   = 80;        // mm - size of the final object in X direction
+x_length   = 113;        // mm - size of the final object in X direction
 // y_length is computed to maintain the correct aspect ratio based on x_span and y_span
 slice_thickness = 2.0;   // mm 
 clearance       = 0.25;  // mm - slot fit tolerance (for MODE="slice_x", "slice_y", "stand_x", "stand_y")
@@ -74,8 +74,7 @@ stand_margin  = 0;       // mm - distance the stand extends beyond the last slic
 
 // Horizontal-slab pitch fudge factor (used by MODE="all_slices_z")
 // Use this to adjust the spacing between horizontal slabs to avoid tiny top slices.
-slab_pitch_mult = 1.2;  // 1.00 = same spacing as the vertical slices, 1.01 = 1% larger spacing
-
+slab_pitch_mult = 1;  // 1.00 = same spacing as the vertical slices, 1.01 = 1% larger spacing
 
 // Sampling resolutions
 zmin_nx    = 80;         // sampling resolution for z_min estimate (x)
@@ -83,6 +82,19 @@ zmin_ny    = 80;         // sampling resolution for z_min estimate (y)
 n_samples  = 180;        // curve sampling resolution
 solid_nx   = 120;        // surface sampling in X (higher = smoother, slower)
 solid_ny   = 120;        // surface sampling in Y (higher = smoother, slower)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ///////////////////////////////////////////////////////////////
 //////////////////////////// CODE /////////////////////////////
