@@ -8,7 +8,7 @@
 ///////////////////////////////////////////////////////////////
 
 // Choose the type of object to generate
-MODE = "all_slices_y";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all_slices_x" | "all_slices_y" | "all_slices_z" | "solid"
+MODE = "all_slices_x";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all_slices_x" | "all_slices_y" | "all_slices_z" | "solid"
                          // "slice_x" produces a slice in which x=constant
                          // "slice_y" produces a slice in which y=constant
                          // "stand_x" produces a stand for slice_x
@@ -25,8 +25,8 @@ MODE = "all_slices_y";          // "slice_x" | "slice_y" | "stand_x" | "stand_y"
 
 // Uncomment exactly one of these files
 // Use no_presets.scad if you plan to enter your own function and custom parameters
-include <no_presets.scad>;
-//include <hyperbolic_paraboloid.scad>;
+//include <no_presets.scad>;
+include <hyperbolic_paraboloid.scad>;
 //include <elliptic_paraboloid.scad>;
 //include <sombrero.scad>;
 
@@ -64,7 +64,7 @@ stand_locations = [0.5];  // locations for the stands: for instance, stand_locat
 //////
 // Size parameters
 //////
-x_length   = 113;        // mm - size of the final object in X direction
+x_length   = 80;        // mm - size of the final object in X direction
 // y_length is computed to maintain the correct aspect ratio based on x_span and y_span
 slice_thickness = 2.0;   // mm 
 clearance       = 0.25;  // mm - slot fit tolerance (for MODE="slice_x", "slice_y", "stand_x", "stand_y")
