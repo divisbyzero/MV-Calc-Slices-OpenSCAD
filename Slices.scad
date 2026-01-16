@@ -2,6 +2,9 @@
 // MULTIVARIABLE CALCULUS SURFACE SLICER
 ///////////////////////////////////////////////////////////////
 
+// Optional preset surfaces
+use <hyperbolic_paraboloid.scad>;
+
 ///////////////////////////////////////////////////////////////
 ///////////////////////// PARAMETERS //////////////////////////
 ///////////////////////////////////////////////////////////////
@@ -15,18 +18,29 @@ MODE = "all_slices_y";          // "slice_x" | "slice_y" | "stand_x" | "stand_y"
                          // "all_slices_y" produces the stand_y plus all slice_y pieces as a single model (no slots)
                          // "solid" produces the full 3D surface solid
 
-//////
-// The function
-//////
-// Note: sin_rad, cos_rad, tan_rad are trig functions that accept radians
-function f(x,y) = 1.25*(x*x - y*y);
-//function f(x,y) = let(r = sqrt(x*x + y*y))(r == 0) ? 2 : 2*sin_rad(r)/r; //use xmin=ymin=-10 and x_span=y_span=20
+// Choose a built-in preset surface, or "custom" to edit the function/parameters below.
+// Presets must be available via `use <...>` above.
+PRESET = "custom"; // "custom" | "hyperbolic_paraboloid"
 
+//////
+// The function -- user defined or from a preset
+//////
+// Parameters for a custom function (not one of the predefined functions).
+// Note: sin_rad, cos_rad, tan_rad are trig functions that accept radians
+function f_custom(x,y) = 1.25*(x*x - y*y);
+//function f(x,y) = let(r = sqrt(x*x + y*y))(r == 0) ? 2 : 2*sin_rad(r)/r; //use xmin=ymin=-10 and x_span=y_span=20
 // Domain: [xmin,xmin+x_span] x [ymin,ymin+y_span]
-xmin       = -2;         // math x-min
-ymin       = -2;         // math y-min
-x_span     = 4;          // math width in x-direction
-y_span     = 4;          // math width in y-direction
+xmin_custom       = -2;         // math x-min
+ymin_custom       = -2;         // math y-min
+x_span_custom     = 4;          // math width in x-direction
+y_span_custom     = 4;          // math width in y-direction
+// Function in mm: z = -z_min + z_buffer + z_scale*f(x,y)
+// z_min is the minimum of z_scale*f over the domain 
+z_scale_custom    = 10;         // mm - z_scale * f(x,y) is the function value in mm
+                                //
+z_buffer_custom   = 5;          // mm -additional vertical translation above the minimum
+                         // z_buffer=0 will put the lowest point of the surface at z=0
+                         // z_buffer=stand_height will put the lowest point at the top of the stand
 
 //////
 // Slice parameters
@@ -45,16 +59,21 @@ clearance       = 0.25;  // mm - slot fit tolerance
 stand_height   = 15;         // mm - height of the slice stands
 stand_margin  = 0;       // mm - distance the stand extends beyond the last slice
 
-// Vertical scaling from math units to mm
-// z_scale * f(x,y) is the function value in mm
-// z_min is the minimum of z_scale*f over the domain 
-// z_buffer is an additional vertical translation above the minimum
-//    Solid: z = -z_min + z_buffer + z_scale*f(x,y)
-//    Slice: z = -z_min + z_buffer + z_scale*f(x,y)
-z_scale    = 10;         // mm per math-unit
-z_buffer   = 5;          // mm 
-                         // z_buffer=0 will put the lowest point of the surface at z=0
-                         // z_buffer=stand_height will put the lowest point at the top of the stand
+
+
+// Parameter bundle selected by preset (or custom).
+params_custom = [xmin_custom, ymin_custom, x_span_custom, y_span_custom, z_scale_custom, z_buffer_custom];
+params = (PRESET=="hyperbolic_paraboloid") ? params_hyperbolic_paraboloid() : params_custom;
+
+// Domain: [xmin,xmin+x_span] x [ymin,ymin+y_span]
+xmin   = params[0];
+ymin   = params[1];
+x_span = params[2];
+y_span = params[3];
+
+// Vertical scaling
+z_scale  = params[4];
+z_buffer = params[5];
 
 // Sampling resolutions
 zmin_nx    = 80;         // sampling resolution for z_min estimate (x)
@@ -67,7 +86,10 @@ solid_ny   = 120;        // surface sampling in Y (higher = smoother, slower)
 //////////////////////////// CODE /////////////////////////////
 ///////////////////////////////////////////////////////////////
 
-
+// Inputs a function from a file based on PRESET
+function f(x,y) =
+    (PRESET=="hyperbolic_paraboloid") ? f_hyperbolic_paraboloid(x,y) :
+    f_custom(x,y);
 
 
 // Stand height is 2*slot_h; slots cut down from the top by slot_h.

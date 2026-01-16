@@ -12,6 +12,15 @@ You define a function `f(x,y)` over a rectangular domain. The script can generat
 
 Everything is parameterized in the top section of [Slices.scad](Slices.scad).
 
+## Preset surfaces
+
+This repo supports preset surfaces defined in separate `.scad` files.
+
+- Preset file added: [hyperbolic_paraboloid.scad](hyperbolic_paraboloid.scad)
+- In [Slices.scad](Slices.scad), set:
+   - `PRESET = "hyperbolic_paraboloid";` to use the preset’s `f(x,y)` and its default domain/scaling, or
+   - `PRESET = "custom";` to edit `f_custom(x,y)` plus `*_custom` parameters directly.
+
 ## Requirements
 
 - [OpenSCAD](https://openscad.org/) (recommended: a recent stable release)
