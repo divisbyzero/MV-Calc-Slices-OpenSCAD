@@ -17,6 +17,7 @@ Everything is parameterized in the top section of [Slices.scad](Slices.scad).
 This repo supports preset surfaces defined in separate `.scad` files.
 
 - Preset file added: [hyperbolic_paraboloid.scad](hyperbolic_paraboloid.scad)
+- Preset file added: [elliptic_paraboloid.scad](elliptic_paraboloid.scad)
 - Preset file added: [sombrero.scad](sombrero.scad)
 - In [Slices.scad](Slices.scad):
    - Uncomment exactly one preset `include <...>;` line near the top.

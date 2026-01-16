@@ -24,8 +24,9 @@ MODE = "all_slices_x";          // "slice_x" | "slice_y" | "stand_x" | "stand_y"
 
 // Uncomment exactly one of these files
 // Use no_presets.scad if you plan to enter your own function and custom parameters
-include <no_presets.scad>;
+//include <no_presets.scad>;
 //include <hyperbolic_paraboloid.scad>;
+include <elliptic_paraboloid.scad>;
 //include <sombrero.scad>;
 
 // Custom parameters
