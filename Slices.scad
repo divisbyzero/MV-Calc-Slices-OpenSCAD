@@ -13,8 +13,8 @@ MODE = "all_slices_z";          // "slice_x" | "slice_y" | "stand_x" | "stand_y"
                          // "slice_y" produces a slice in which y=constant
                          // "stand_x" produces a stand for slice_x
                          // "stand_y" produces a stand for slice_y
-                         // "all_slices_x" produces the stand_x plus all slice_x pieces as a single model (no slots)
-                         // "all_slices_y" produces the stand_y plus all slice_y pieces as a single model (no slots)
+                         // "all_slices_x" produces the stand_x plus all slice_x pieces as a single model
+                         // "all_slices_y" produces the stand_y plus all slice_y pieces as a single model
                          // "all_slices_z" produces a solid cut into horizontal slices (proof-of-concept via deleting gap boxes)
                          // "solid" produces the full 3D surface solid
 
@@ -25,17 +25,18 @@ MODE = "all_slices_z";          // "slice_x" | "slice_y" | "stand_x" | "stand_y"
 
 // Uncomment exactly one of these files
 // Use no_presets.scad if you plan to enter your own function and custom parameters
-//include <no_presets.scad>;
-include <hyperbolic_paraboloid.scad>;
+include <no_presets.scad>;
+//include <hyperbolic_paraboloid.scad>;
 //include <elliptic_paraboloid.scad>;
 //include <sombrero.scad>;
 
 // Custom parameters
-// These only apply when using: include <no_presets.scad>;
+// These only apply when using no_presets.scad
 // Custom function
 function f_user(x,y) = -x*x-2*y*y; // Note: sin_rad, cos_rad, tan_rad are trig functions that accept radians
 
 // Domain: [xmin,xmin+x_span] x [ymin,ymin+y_span]
+// Note: if the domain is not a square, then keeping the same number of traces will yield traces that are spaced by different amounts in the two directions
 xmin       = -sqrt(2);         // math x-min
 ymin       = -1;         // math y-min
 x_span     = 2*sqrt(2);          // math width in x-direction
@@ -46,36 +47,46 @@ z_scale    = 30;         // mm - z_scale * f(x,y) is the function value in mm
 z_buffer   = 0;          // mm - additional vertical translation above the minimum
                          // z_buffer=0 will put the lowest point of the surface at z=0
                          // z_buffer=stand_height will put the lowest point at the top of the stand
-// Vertical columns to support the horizonta slices when using MODE="all_slices_z"
+// Vertical columns to support the horizontal slices when using MODE="all_slices_z"
 // Column centers are specified in model XY coordinates (mm) where the solid is centered on the origin.
-column_size_x = 6;        // mm - column size in X
+column_size_x = 3;        // mm - column size in X
 column_size_y = 3;        // mm - column size in Y
-column_centers_mm = [[-37,0],[37,0]];   // list of [x_mm, y_mm] centers; empty => no columns
+column_centers_mm = [[0,0]];   // list of [x_mm, y_mm] centers; empty => no columns
 // End custom parameters
-// The parameters below can apply to any model
+// The parameters below will apply to any model
 
 //////
 // Slice parameters
 //////
-numslices  = 11;          // number of traces
-k          = 4;          // slice number to generate: 1...numslices
-slot_positions = [0.25, 0.75];  // slot placement(s) for the stand: for instance, slot_positions = [0.25, 0.75] would yield slots at 1/4 and 3/4 of the slice length.
+numslices  = 11;          // the total number of traces (for MODE="slice_x" or "slice_y" or "all_slices_x" or "all_slices_y". It will also determine the spacing of horizontal slices in MODE="all_slices_z")
+k          = 4;          // slice number to generate: 1...numslices (for MODE="slice_x" or "slice_y")
+stand_locations = [0.25, 0.75];  // locations for the stands: for instance, stand_locations = [0.25, 0.75] would yield stands at 1/4 and 3/4 of the slice length (for the MODE="stand_x" or "stand_y" or "all_slices_x" or "all_slices_y")
 
 //////
 // Size parameters
 //////
 x_length   = 80;        // mm - size of the final object in X direction
-// y_length is computed to maintain aspect ratio based on x_span and y_span
+// y_length is computed to maintain the correct aspect ratio based on x_span and y_span
 slice_thickness = 2.0;   // mm 
-clearance       = 0.25;  // mm - slot fit tolerance
-stand_height   = 15;         // mm - height of the slice stands
-stand_margin  = 0;       // mm - distance the stand extends beyond the last slice
+clearance       = 0.25;  // mm - slot fit tolerance (for MODE="slice_x", "slice_y", "stand_x", "stand_y")
+stand_height   = 15;         // mm - height of the slice stands (for MODE="slice_x", "slice_y", "stand_x", "stand_y", "all_slices_x", "all_slices_y")
+stand_margin  = 0;       // mm - distance the stand extends beyond the last slice (for MODE="stand_x", "stand_y")
 
-// Horizontal-slab pitch fudge (used by MODE="all_slices_z")
-// dz_base = x_length/(numslices-1). The actual pitch is:
-//   dz_mm = dz_base * slab_pitch_mult
-// Use this to avoid tiny top remnants by nudging the pitch slightly.
-slab_pitch_mult = 1.01;  // 1.00 = unchanged, 1.01 = 1% larger spacing
+// Horizontal-slab pitch fudge factor (used by MODE="all_slices_z")
+// Use this to adjust the spacing between horizontal slabs to avoid tiny top slices.
+slab_pitch_mult = 1.2;  // 1.00 = same spacing as the vertical slices, 1.01 = 1% larger spacing
+
+
+// Sampling resolutions
+zmin_nx    = 80;         // sampling resolution for z_min estimate (x)
+zmin_ny    = 80;         // sampling resolution for z_min estimate (y)
+n_samples  = 180;        // curve sampling resolution
+solid_nx   = 120;        // surface sampling in X (higher = smoother, slower)
+solid_ny   = 120;        // surface sampling in Y (higher = smoother, slower)
+
+///////////////////////////////////////////////////////////////
+//////////////////////////// CODE /////////////////////////////
+///////////////////////////////////////////////////////////////
 
 
 // Parameter bundle selected by SOURCE.
@@ -102,16 +113,6 @@ column_size_x_eff = column_params[0];
 column_size_y_eff = column_params[1];
 column_centers_mm_eff = column_params[2];
 
-// Sampling resolutions
-zmin_nx    = 80;         // sampling resolution for z_min estimate (x)
-zmin_ny    = 80;         // sampling resolution for z_min estimate (y)
-n_samples  = 180;        // curve sampling resolution
-solid_nx   = 120;        // surface sampling in X (higher = smoother, slower)
-solid_ny   = 120;        // surface sampling in Y (higher = smoother, slower)
-
-///////////////////////////////////////////////////////////////
-//////////////////////////// CODE /////////////////////////////
-///////////////////////////////////////////////////////////////
 
 // Selected surface function
 function f(x,y) = (SOURCE=="FROM_FILE") ? preset_f(x,y) : f_user(x,y);
@@ -332,7 +333,7 @@ module slice3D(k_=k, const_axis) {
 
         // Two bottom slots (notches): opening width = slot_opening_w,
         // height = slot_h, centered at 1/4 and 3/4 of the length.
-        for (p = slot_positions) {
+        for (p = stand_locations) {
             // In this model, the slice outline is in the XY plane:
             //   X = along the slice length (0..slice_len)
             //   Y = vertical height (0..z)
@@ -426,14 +427,14 @@ module all_slices_assembled(const_axis) {
         // Stands (beams)
         if (const_axis=="y") {
             // y is constant per slice => slices are placed along Y
-            for (p = slot_positions) {
+            for (p = stand_locations) {
                 x0 = lerp(-x_length/2, x_length/2, p);
                 translate([x0 - slice_thickness/2, -y_length/2 - stand_margin, 0])
                     cube([slice_thickness, y_length + 2*stand_margin, stand_height], center=false);
             }
         } else {
             // x is constant per slice => slices are placed along X
-            for (p = slot_positions) {
+            for (p = stand_locations) {
                 y0 = lerp(-y_length/2, y_length/2, p);
                 translate([-x_length/2 - stand_margin, y0 - slice_thickness/2, 0])
                     cube([x_length + 2*stand_margin, slice_thickness, stand_height], center=false);

@@ -31,6 +31,3 @@ function preset_column_params() = [
     [[-38.5,0],[38.5,0]]
 ];
 
-// Backwards-compatible aliases (older Slices.scad versions)
-function f_hyperbolic_paraboloid(x, y) = preset_f(x, y);
-function params_hyperbolic_paraboloid() = preset_params();
