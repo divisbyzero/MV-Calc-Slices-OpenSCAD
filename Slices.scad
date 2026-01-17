@@ -8,7 +8,7 @@
 ///////////////////////////////////////////////////////////////
 
 // Choose the type of object to generate
-MODE = "all_slices_x";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all_slices_x" | "all_slices_y" | "all_slices_z" | "solid"
+MODE = "all_slices_z";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all_slices_x" | "all_slices_y" | "all_slices_z" | "solid"
                          // "slice_x" produces a slice in which x=constant
                          // "slice_y" produces a slice in which y=constant
                          // "stand_x" produces a stand for slice_x
@@ -73,7 +73,7 @@ stand_margin  = 0;       // mm - distance the stand extends beyond the last slic
 
 // Horizontal-slab pitch fudge factor (used by MODE="all_slices_z")
 // Use this to adjust the spacing between horizontal slabs to avoid tiny top slices.
-slab_pitch_mult = 1;  // 1.00 = same spacing as the vertical slices, 1.01 = 1% larger spacing
+slab_pitch_mult = 0.92;  // 1.00 = same spacing as the vertical slices, 1.01 = 1% larger spacing
 
 // Sampling resolutions
 zmin_nx    = 80;         // sampling resolution for z_min estimate (x)

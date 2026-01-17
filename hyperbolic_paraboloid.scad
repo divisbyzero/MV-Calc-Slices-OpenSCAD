@@ -11,7 +11,7 @@
 
 SOURCE = "FROM_FILE";
 
-function preset_f(x, y) = 1.25*(x*x - y*y)+2.3;
+function preset_f(x, y) = 1.25*(x*x - y*y)+2.6;
 
 // Default parameter suggestion for this preset.
 // To use custom values instead, include no_presets.scad in Slices.scad.
