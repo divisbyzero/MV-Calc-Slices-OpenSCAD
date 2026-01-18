@@ -8,7 +8,7 @@
 ///////////////////////////////////////////////////////////////
 
 // Choose the type of object to generate
-MODE = "all_slices_z";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all_slices_x" | "all_slices_y" | "all_slices_z" | "solid"
+MODE = "all_slices_y";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all_slices_x" | "all_slices_y" | "all_slices_z" | "solid"
                          // "slice_x" produces a slice in which x=constant
                          // "slice_y" produces a slice in which y=constant
                          // "stand_x" produces a stand for slice_x
@@ -59,7 +59,7 @@ column_centers_mm = [[0,0]];   // list of [x_mm, y_mm] centers; empty => no colu
 //////
 numslices  = 11;          // the total number of traces (for MODE="slice_x" or "slice_y" or "all_slices_x" or "all_slices_y". It will also determine the spacing of horizontal slices in MODE="all_slices_z")
 k          = 4;          // slice number to generate: 1...numslices (for MODE="slice_x" or "slice_y")
-stand_locations = [0.5];  // locations for the stands: for instance, stand_locations = [0.25, 0.75] would yield stands at 1/4 and 3/4 of the slice length (for the MODE="stand_x" or "stand_y" or "all_slices_x" or "all_slices_y")
+stand_locations = [0.25,0.75];  // locations for the stands: for instance, stand_locations = [0.25, 0.75] would yield stands at 1/4 and 3/4 of the slice length (for the MODE="stand_x" or "stand_y" or "all_slices_x" or "all_slices_y")
 
 //////
 // Size parameters
