@@ -8,9 +8,9 @@
 ///////////////////////////////////////////////////////////////
 
 // Choose the type of object to generate
-MODE = "all_slices_y";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all_slices_x" | "all_slices_y" | "all_slices_z" | "solid"
-                         // "slice_x" produces a slice in which x=constant
-                         // "slice_y" produces a slice in which y=constant
+MODE = "all_slices_x";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all_slices_x" | "all_slices_y" | "all_slices_z" | "solid"
+                         // "slice_x" produces a slice in which x=constant; it has a slot to fit onto stand_x
+                         // "slice_y" produces a slice in which y=constant; it has a slot to fit onto stand_y
                          // "stand_x" produces a stand for slice_x
                          // "stand_y" produces a stand for slice_y
                          // "all_slices_x" produces the stand_x plus all slice_x pieces as a single model
@@ -24,10 +24,10 @@ MODE = "all_slices_y";          // "slice_x" | "slice_y" | "stand_x" | "stand_y"
 //////
 
 // Uncomment exactly one of these files
-// Use no_presets.scad if you plan to enter your own function and custom parameters
+// Use no_presets.scad if you plan to enter your own function and custom parameters below
 //include <no_presets.scad>;
-include <hyperbolic_paraboloid.scad>;
-//include <elliptic_paraboloid.scad>;
+//include <hyperbolic_paraboloid.scad>;
+include <elliptic_paraboloid.scad>;
 //include <sombrero.scad>;
 
 // Custom parameters
@@ -58,8 +58,8 @@ column_centers_mm = [[0,0]];   // list of [x_mm, y_mm] centers; empty => no colu
 // Slice parameters
 //////
 numslices  = 11;          // the total number of traces (for MODE="slice_x" or "slice_y" or "all_slices_x" or "all_slices_y". It will also determine the spacing of horizontal slices in MODE="all_slices_z")
-k          = 4;          // slice number to generate: 1...numslices (for MODE="slice_x" or "slice_y")
-stand_locations = [0.25,0.75];  // locations for the stands: for instance, stand_locations = [0.25, 0.75] would yield stands at 1/4 and 3/4 of the slice length (for the MODE="stand_x" or "stand_y" or "all_slices_x" or "all_slices_y")
+k          = 3;          // slice number to generate: 1...numslices (for MODE="slice_x" or "slice_y")
+stand_locations = [0.5];  // locations for the stands: for instance, stand_locations = [0.25, 0.75] would yield stands at 1/4 and 3/4 of the slice length (for the MODE="stand_x" or "stand_y" or "all_slices_x" or "all_slices_y")
 
 //////
 // Size parameters
@@ -68,7 +68,7 @@ x_length   = 80;        // mm - size of the final object in X direction
 // y_length is computed to maintain the correct aspect ratio based on x_span and y_span
 slice_thickness = 1.5;   // mm 
 clearance       = 0.25;  // mm - slot fit tolerance (for MODE="slice_x", "slice_y", "stand_x", "stand_y")
-stand_height   = 15;         // mm - height of the slice stands (for MODE="slice_x", "slice_y", "stand_x", "stand_y", "all_slices_x", "all_slices_y")
+stand_height   = 10;         // mm - height of the slice stands (for MODE="slice_x", "slice_y", "stand_x", "stand_y", "all_slices_x", "all_slices_y")
 stand_margin  = 0;       // mm - distance the stand extends beyond the last slice (for MODE="stand_x", "stand_y")
 
 // Horizontal-slab pitch fudge factor (used by MODE="all_slices_z")

@@ -12,16 +12,16 @@
 SOURCE = "FROM_FILE";
 
 // Matches the current custom function in Slices.scad
-function preset_f(x, y) = -x*x - 2*y*y;
+function preset_f(x, y) = 2-x*x - 2*y*y;
 
 // Matches the current custom parameter values in Slices.scad
 function preset_params() = [
     -sqrt(2),   // xmin
-    -1,         // ymin
+    -1.2,         // ymin
     2*sqrt(2),  // x_span
-    2,          // y_span
-    30,         // z_scale
-    0,          // z_buffer
+    2.4,          // y_span
+    40,         // z_scale
+    10,          // z_buffer
     3,          // column_size_x
     3,          // column_size_y
     [[0,0]]     // column_centers_mm

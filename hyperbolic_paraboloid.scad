@@ -17,9 +17,9 @@ function preset_f(x, y) = 1.25*(x*x - y*y)+5;;
 // To use custom values instead, include no_presets.scad in Slices.scad.
 function preset_params() = [
     -2,  // xmin
-    -2,  // ymin
+    -3,  // ymin
      4,  // x_span
-     4,  // y_span
+     6,  // y_span
     10,  // z_scale
      5,  // z_buffer
      3,  // column_size_x

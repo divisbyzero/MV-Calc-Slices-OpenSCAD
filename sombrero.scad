@@ -16,7 +16,7 @@ SOURCE = "FROM_FILE";
 // OpenSCAD's sin() takes degrees, so we convert radians -> degrees.
 function preset_f(x, y) =
     let(r = sqrt(x*x + y*y))
-    (r == 0) ? 2 : 2 * sin(r * 180 / PI) / r;
+    (r == 0) ? 3 : 3 * sin(r * 180 / PI) / r;
 
 function preset_params() = [
     -12, // xmin
