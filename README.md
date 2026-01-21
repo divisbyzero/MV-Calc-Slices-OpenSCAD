@@ -69,7 +69,7 @@ For `MODE="all_slices_z"`, the bottom slab sits on the XY plane (`z=0`). Each sl
 
 If you see a tiny “top remnant” slab, you can nudge the pitch via:
 
-- `slab_pitch_mult` (default `1.00`; try `1.01`)
+- `slab_pitch_mult` (default `0.92`; try `1.01`)
 
 `MODE="all_slices_z"` also supports optional vertical columns (useful as built-in supports). In [Slices.scad](Slices.scad), set:
 
@@ -171,9 +171,9 @@ If you want the “complete classroom object” as one STL (no assembly, no slot
 1. Set:
    - `MODE = "all_slices_x";` (or `"all_slices_y"`)
 2. Set `numslices`.
-3. Set `slot_positions` to control where the stand(s) sit along the slice length.
-   - Example: `slot_positions = [0.5];` places the stand halfway along every slice.
-   - Example: `slot_positions = [0.25, 0.75];` places two stands.
+3. Set `stand_locations` to control where the stand(s) sit along the slice length.
+   - Example: `stand_locations = [0.5];` places the stand halfway along every slice.
+   - Example: `stand_locations = [0.25, 0.75];` places two stands.
 4. **F6** render, then export STL.
 
 The assembled modes still use the same vertical shifting/lift as the individual slice profiles, but they omit the notch cutouts so everything is a single `union()`.
@@ -188,11 +188,11 @@ Key parameters:
 
 - `slice_thickness` (mm): the extrusion thickness of each slice
 - `clearance` (mm): extra width added to the slot opening for easier assembly
-- `slot_h` (mm): slot depth/height
-- `slot_positions`: where along the slice length slots are placed
-  - Example: `slot_positions = [0.25, 0.75];` places two slots at 1/4 and 3/4 of the slice length.
+-- `slot_h` (mm): slot depth/height
+-- `stand_locations`: where along the slice length slots/stands are placed for the per-slice/stand modes
+   - Example: `stand_locations = [0.25, 0.75];` places two slots/stands at 1/4 and 3/4 of the slice length.
 
-In the assembled modes, `slot_positions` instead controls where the stand(s) are placed along the slice length.
+In the assembled modes, `stand_locations` controls where the stand(s) are placed along the slice length.
 
 The actual slot opening used is:
 
