@@ -20,7 +20,7 @@ function preset_params() = [
     -3,  // ymin
      4,  // x_span
      6,  // y_span
-    10,  // z_scale
+    8,  // z_scale
      5,  // z_buffer
      3,  // column_size_x
      3,  // column_size_y

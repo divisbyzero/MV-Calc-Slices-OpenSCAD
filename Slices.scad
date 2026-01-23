@@ -26,8 +26,8 @@ MODE = "solid";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all
 // Uncomment exactly one of these files
 // Use no_presets.scad if you plan to enter your own function and custom parameters below
 //include <no_presets.scad>;
-//include <hyperbolic_paraboloid.scad>;
-include <elliptic_paraboloid.scad>;
+include <hyperbolic_paraboloid.scad>;
+//include <elliptic_paraboloid.scad>;
 //include <sombrero.scad>;
 
 // Custom parameters
@@ -57,9 +57,9 @@ column_centers_mm = [[0,0]];   // list of [x_mm, y_mm] centers; empty => no colu
 //////
 // Slice parameters
 //////
-numslices  = 11;          // the total number of traces (for MODE="slice_x" or "slice_y" or "all_slices_x" or "all_slices_y". It will also determine the spacing of horizontal slices in MODE="all_slices_z")
-k          = 3;          // slice number to generate: 1...numslices (for MODE="slice_x" or "slice_y")
-stand_locations = [0.5];  // locations for the stands: for instance, stand_locations = [0.25, 0.75] would yield stands at 1/4 and 3/4 of the slice length (for the MODE="stand_x" or "stand_y" or "all_slices_x" or "all_slices_y")
+numslices  = 9;          // the total number of traces (for MODE="slice_x" or "slice_y" or "all_slices_x" or "all_slices_y". It will also determine the spacing of horizontal slices in MODE="all_slices_z")
+k          = 1;          // slice number to generate: 1...numslices (for MODE="slice_x" or "slice_y")
+stand_locations = [0.3, 0.7];  // locations for the stands: for instance, stand_locations = [0.25, 0.75] would yield stands at 1/4 and 3/4 of the slice length (for the MODE="stand_x" or "stand_y" or "all_slices_x" or "all_slices_y")
 
 //////
 // Size parameters
@@ -68,12 +68,12 @@ x_length   = 80;        // mm - size of the final object in X direction
 // y_length is computed to maintain the correct aspect ratio based on x_span and y_span
 slice_thickness = 1.5;   // mm 
 clearance       = 0.25;  // mm - slot fit tolerance (for MODE="slice_x", "slice_y", "stand_x", "stand_y")
-stand_height   = 10;         // mm - height of the slice stands (for MODE="slice_x", "slice_y", "stand_x", "stand_y", "all_slices_x", "all_slices_y")
-stand_margin  = 0;       // mm - distance the stand extends beyond the last slice (for MODE="stand_x", "stand_y")
+stand_height   = 20;         // mm - height of the slice stands (for MODE="slice_x", "slice_y", "stand_x", "stand_y", "all_slices_x", "all_slices_y")
+stand_margin  = 5;       // mm - distance the stand extends beyond the last slice (for MODE="stand_x", "stand_y")
 
 // Horizontal-slab pitch fudge factor (used by MODE="all_slices_z")
 // Use this to adjust the spacing between horizontal slabs to avoid tiny top slices.
-slab_pitch_mult = 0.92;  // 1.00 = same spacing as the vertical slices, 1.01 = 1% larger spacing
+slab_pitch_mult = 1;  // 1.00 = same spacing as the vertical slices, 1.01 = 1% larger spacing
 
 // Sampling resolutions
 zmin_nx    = 80;         // sampling resolution for z_min estimate (x)
@@ -356,17 +356,18 @@ module slice2D_outline(k_=k, const_axis, slot_lift=true) {
     yk = yk_from_k(k_);
     slice_len = slice_length_mm(const_axis);
 
+    // Center the slice on the origin: x in [-slice_len/2, +slice_len/2]
     top = [
         for (i=[0:n_samples])
-            let(s_mm = slice_len * i / n_samples,
-                xm   = (const_axis=="x") ? xk : x_math_from_mm(s_mm),
-                ym   = (const_axis=="x") ? y_math_from_mm(s_mm) : yk,
+            let(s_mm = -slice_len/2 + slice_len * i / n_samples,
+                xm   = (const_axis=="x") ? xk : x_math_from_mm(s_mm + slice_len/2),
+                ym   = (const_axis=="x") ? y_math_from_mm(s_mm + slice_len/2) : yk,
                 z    = slot_lift ? z_slice_mm(xm, ym) : z_solid_mm(xm, ym))
             [s_mm, z]
     ];
 
-    bottom_left  = [0, 0];
-    bottom_right = [slice_len, 0];
+    bottom_left  = [-slice_len/2, 0];
+    bottom_right = [slice_len/2, 0];
 
     polygon(points = concat([bottom_left, bottom_right], reverse_list(top)));
 }
@@ -393,15 +394,10 @@ module slice3D(k_=k, const_axis) {
         linear_extrude(height = slice_thickness, center=false, convexity=10)
             slice2D_outline(k_, const_axis, slot_lift=true);
 
-        // Two bottom slots (notches): opening width = slot_opening_w,
-        // height = slot_h, centered at 1/4 and 3/4 of the length.
+        // Place slots using lerp to ensure correct proportional placement
         for (p = stand_locations) {
-            // In this model, the slice outline is in the XY plane:
-            //   X = along the slice length (0..slice_len)
-            //   Y = vertical height (0..z)
-            // and the slice thickness is extruded along Z.
-            // So the notch should be positioned along X, rise in Y, and cut through Z.
-            translate([ p*slot_ref_len - slot_opening_w/2, -1, -1 ]) // -1 ensures full cut
+            slot_x = lerp(-slice_len/2, slice_len/2, p);
+            translate([ slot_x - slot_opening_w/2, -1, -1 ])
                 cube([ slot_opening_w, slot_h + 1, slice_thickness + 2 ], center=false);
         }
     }

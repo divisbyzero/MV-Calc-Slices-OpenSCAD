@@ -1,16 +1,18 @@
+
 # MV-Calc Slices (OpenSCAD)
 
-An OpenSCAD model for generating **3D-printable multivariable calculus surfaces** and either:
+This OpenSCAD model generates **3D-printable multivariable calculus surfaces** in a variety of formats for teaching, demonstration, or exploration. You define a function `f(x,y)` over a rectangular domain, and the script can produce:
 
-- a **modular** set of interlocking slices + stands, or
-- a **one-piece assembled** “stand + all slices” print.
+- The full 3D surface as a watertight solid (`MODE="solid"`)
+- A single slice in which **x = constant** (`MODE="slice_x"`), with a slot to fit onto a matching stand (`MODE="stand_x"`)
+- A single slice in which **y = constant** (`MODE="slice_y"`), with a slot to fit onto a matching stand (`MODE="stand_y"`)
+- A one-piece assembled model: stand(s) plus **all** `slice_x` slices (`MODE="all_slices_x"`)
+- A one-piece assembled model: stand(s) plus **all** `slice_y` slices (`MODE="all_slices_y"`)
+- The full solid cut into horizontal slabs (proof-of-concept) (`MODE="all_slices_z"`)
 
-You define a function `f(x,y)` over a rectangular domain. The script can generate:
+All options are controlled by the `MODE` parameter at the top of [Slices.scad](Slices.scad).
 
-- the full surface as a watertight solid (`MODE="solid"`), and/or
-- a family of constant-\(x\) or constant-\(y\) slices (`MODE="slice_x"` / `MODE="slice_y"`) with matching stands (`MODE="stand_x"` / `MODE="stand_y"`).
-
-Everything is parameterized in the top section of [Slices.scad](Slices.scad).
+Everything is parameterized in the top section of [Slices.scad](Slices.scad), including the function, domain, scaling, number of slices, and stand locations.
 
 ## Preset surfaces
 
@@ -31,11 +33,6 @@ function preset_f(x,y) = ...;
 // [xmin, ymin, x_span, y_span, z_scale, z_buffer, column_size_x, column_size_y, column_centers_mm]
 function preset_params() = [ ... ];
 ```
-
-## Requirements
-
-- [OpenSCAD](https://openscad.org/) (recommended: a recent stable release)
-- Optional: a slicer (PrusaSlicer, Cura, OrcaSlicer, etc.) and a 3D printer
 
 ## Quick start
 
