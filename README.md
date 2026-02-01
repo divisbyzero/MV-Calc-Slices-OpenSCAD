@@ -1,7 +1,7 @@
 
 # MV-Calc Slices (OpenSCAD)
 
-This OpenSCAD code generates **3D-printable multivariable calculus surfaces** in a variety of formats for teaching, demonstration, or exploration. You define a function `f(x,y)` over a rectangular domain, and the script can produce:
+This OpenSCAD code generates **3D-printable multivariable calculus surfaces** in a variety of formats. You define a function `f(x,y)` over a rectangular domain, and the script can produce:
 
 - The full 3D surface as a watertight solid (`MODE="solid"`)
 - A single slice in which **x = constant** (`MODE="slice_x"`), with a slot to fit onto a matching stand (`MODE="stand_x"`)
