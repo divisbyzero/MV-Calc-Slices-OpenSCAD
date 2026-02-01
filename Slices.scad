@@ -58,7 +58,7 @@ column_centers_mm = [[0,0]];   // list of [x_mm, y_mm] centers; empty => no colu
 // Slice parameters
 //////
 numslices  = 9;          // the total number of traces (for MODE="slice_x" or "slice_y" or "all_slices_x" or "all_slices_y". It will also determine the spacing of horizontal slices in MODE="all_slices_z")
-k          = 1;          // slice number to generate: 1...numslices (for MODE="slice_x" or "slice_y")
+k          = 4;          // slice number to generate: 1...numslices (for MODE="slice_x" or "slice_y")
 stand_locations = [0.3, 0.7];  // locations for the stands: for instance, stand_locations = [0.25, 0.75] would yield stands at 1/4 and 3/4 of the slice length (for the MODE="stand_x" or "stand_y" or "all_slices_x" or "all_slices_y")
 
 //////
@@ -68,8 +68,9 @@ x_length   = 80;        // mm - size of the final object in X direction
 // y_length is computed to maintain the correct aspect ratio based on x_span and y_span
 slice_thickness = 1.5;   // mm 
 clearance       = 0.25;  // mm - slot fit tolerance (for MODE="slice_x", "slice_y", "stand_x", "stand_y")
-stand_height   = 20;         // mm - height of the slice stands (for MODE="slice_x", "slice_y", "stand_x", "stand_y", "all_slices_x", "all_slices_y")
+stand_height   = 10;         // mm - height of the slice stands (for MODE="slice_x", "slice_y", "stand_x", "stand_y", "all_slices_x", "all_slices_y")
 stand_margin  = 5;       // mm - distance the stand extends beyond the last slice (for MODE="stand_x", "stand_y")
+assembled_stand_margin = 0; // mm - extra overhang for stand beams in MODE="all_slices_x"/"all_slices_y" (0 = flush with outermost slices)
 
 // Horizontal-slab pitch fudge factor (used by MODE="all_slices_z")
 // Use this to adjust the spacing between horizontal slabs to avoid tiny top slices.
@@ -380,6 +381,17 @@ module slice3D(k_=k, const_axis) {
     yk = yk_from_k(k_);
     slice_len = slice_length_mm(const_axis);
     eps = 0.001;
+
+    // If the clipped surface never rises above z=0 along this slice, the outline
+    // degenerates to a zero-area polygon and OpenSCAD will render/export nothing.
+    // Emit a helpful message in that case.
+    slice_max_z = max([
+        for (i=[0:n_samples])
+            let(s_mm = slice_len * i / n_samples,
+                xm   = (const_axis=="x") ? xk : x_math_from_mm(s_mm),
+                ym   = (const_axis=="x") ? y_math_from_mm(s_mm) : yk)
+            z_slice_mm(xm, ym)
+    ]);
     nonzero_idx = [
         for (i=[0:n_samples])
             let(s_mm = slice_len * i / n_samples,
@@ -390,15 +402,20 @@ module slice3D(k_=k, const_axis) {
     ];
     slot_ref_len = (len(nonzero_idx) == 0) ? slice_len : (slice_len * max(nonzero_idx) / n_samples);
 
-    difference() {
-        linear_extrude(height = slice_thickness, center=false, convexity=10)
-            slice2D_outline(k_, const_axis, slot_lift=true);
+    if (slice_max_z <= eps) {
+        echo("Empty slice after z>=0 clipping. Try increasing z_buffer (or the preset's z_buffer), or choose a different k.",
+             MODE=MODE, const_axis=const_axis, k=k_, xk=xk, yk=yk, z_max_along_slice=slice_max_z);
+    } else {
+        difference() {
+            linear_extrude(height = slice_thickness, center=false, convexity=10)
+                slice2D_outline(k_, const_axis, slot_lift=true);
 
-        // Place slots using lerp to ensure correct proportional placement
-        for (p = stand_locations) {
-            slot_x = lerp(-slice_len/2, slice_len/2, p);
-            translate([ slot_x - slot_opening_w/2, -1, -1 ])
-                cube([ slot_opening_w, slot_h + 1, slice_thickness + 2 ], center=false);
+            // Place slots using lerp to ensure correct proportional placement
+            for (p = stand_locations) {
+                slot_x = lerp(-slice_len/2, slice_len/2, p);
+                translate([ slot_x - slot_opening_w/2, -1, -1 ])
+                    cube([ slot_opening_w, slot_h + 1, slice_thickness + 2 ], center=false);
+            }
         }
     }
 }
@@ -474,6 +491,7 @@ module stand3D_upright_no_slots(const_axis) {
 // - For all_slices_x (const_axis="x"), stands run along +X and are placed at Y positions.
 module all_slices_assembled(const_axis) {
     slice_len = slice_length_mm(const_axis);
+    beam_margin = assembled_stand_margin;
 
     function slice_pos_mm(i) =
         (stand_N<=1) ? 0 :
@@ -487,15 +505,15 @@ module all_slices_assembled(const_axis) {
             // y is constant per slice => slices are placed along Y
             for (p = stand_locations) {
                 x0 = lerp(-x_length/2, x_length/2, p);
-                translate([x0 - slice_thickness/2, -y_length/2 - stand_margin, 0])
-                    cube([slice_thickness, y_length + 2*stand_margin, stand_height], center=false);
+                translate([x0 - slice_thickness/2, -y_length/2 - beam_margin, 0])
+                    cube([slice_thickness, y_length + 2*beam_margin, stand_height], center=false);
             }
         } else {
             // x is constant per slice => slices are placed along X
             for (p = stand_locations) {
                 y0 = lerp(-y_length/2, y_length/2, p);
-                translate([-x_length/2 - stand_margin, y0 - slice_thickness/2, 0])
-                    cube([x_length + 2*stand_margin, slice_thickness, stand_height], center=false);
+                translate([-x_length/2 - beam_margin, y0 - slice_thickness/2, 0])
+                    cube([x_length + 2*beam_margin, slice_thickness, stand_height], center=false);
             }
         }
 
@@ -505,11 +523,11 @@ module all_slices_assembled(const_axis) {
 
             if (const_axis=="y") {
                 // slice_y: plane is XZ, thickness is Y
-                translate([-slice_len/2, pos + slice_thickness/2, 0])
+                translate([0, pos + slice_thickness/2, 0])
                     slice3D_upright_no_slots(i+1, "y");
             } else {
                 // slice_x: plane is YZ, thickness is X
-                translate([pos - slice_thickness/2, -slice_len/2, 0])
+                translate([pos - slice_thickness/2, 0, 0])
                     rotate([90, 0, 90])
                         slice3D_no_slots(i+1, "x");
             }
