@@ -8,7 +8,7 @@ This OpenSCAD code generates **3D-printable multivariable calculus surfaces** in
 - A single slice in which **y = constant** (`MODE="slice_y"`), with a slot to fit onto a matching stand (`MODE="stand_y"`)
 - A one-piece assembled model: stand(s) plus **all** `slice_x` slices (`MODE="all_slices_x"`)
 - A one-piece assembled model: stand(s) plus **all** `slice_y` slices (`MODE="all_slices_y"`)
-- The full solid cut into horizontal slabs (proof-of-concept) (`MODE="all_slices_z"`)
+- The full solid cut into horizontal slabs (`MODE="all_slices_z"`)
 
 Everything is parameterized in the top section of [Slices.scad](Slices.scad), including the function, domain, scaling, number of slices, and stand locations.
 
@@ -59,7 +59,7 @@ Set `MODE` to one of the following:
 - `"stand_y"`: stand that mates with `slice_y`
 - `"all_slices_x"`: one-piece assembled model: stand(s) + **all** `slice_x` slices (no slots)
 - `"all_slices_y"`: one-piece assembled model: stand(s) + **all** `slice_y` slices (no slots)
-- `"all_slices_z"`: proof-of-concept: full solid cut into `numslices` horizontal slabs by deleting thin horizontal boxes
+- "all_slices_z": full solid cut into horizontal slabs by deleting thin horizontal boxes (slab count is computed automatically)
 
 For `MODE="all_slices_z"`, the bottom slab sits on the XY plane (`z=0`). Each slab has thickness `slice_thickness`, the vertical pitch rule is based on the X-direction slice spacing (approximately `x_length/(numslices-1)` mm), and the number of slabs is computed automatically from the sampled maximum height of the surface.
 
@@ -109,8 +109,12 @@ When using a preset surface file, the domain/scaling parameters come from that f
 In terms of the math-defined height in millimeters,
 
 - `f_mm(x,y) = z_scale * f(x,y)`
-- surface height used for the solid is:
-   - `z_solid_mm(x,y) = z_buffer + f_mm(x,y)`
+- unclipped surface height is:
+   - `z_surface_mm(x,y) = z_buffer + f_mm(x,y)`
+
+The solid/slices then use the clipped height:
+
+- `z_solid_mm(x,y) = max(0, z_surface_mm(x,y))`
 
 The generated 3D solid only includes the portion of this surface **above the XY plane** (`z>=0`). If the surface dips below `z=0`, those regions contribute no volume.
 
@@ -150,11 +154,11 @@ If you want the “complete classroom object” as one STL (no assembly, no slot
    - Example: `stand_locations = [0.5];` places the stand halfway along every slice.
    - Example: `stand_locations = [0.25, 0.75];` places two stands.
 
-For the horizontal-slab variant use `MODE = "all_slices_z"` (proof-of-concept):
+For the horizontal-slab variant use `MODE = "all_slices_z"`:
 
 1. Set:
    - `MODE = "all_slices_z";`
-2. Set `numslices` (controls sampling/stacking used to compute slab count).
+2. Set `numslices` (controls the vertical pitch via approximately `x_length/(numslices-1)` mm).
 3. Adjust slab parameters:
    - `slice_thickness` (mm) controls individual slab thickness.
    - `slab_pitch_mult` (multiplier for vertical pitch; default `1.0`) nudges the vertical spacing — if you see a tiny top remnant slab, try values slightly above or below `1.0` (e.g. `1.01` or `0.97`).
