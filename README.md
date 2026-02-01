@@ -1,7 +1,7 @@
 
 # MV-Calc Slices (OpenSCAD)
 
-This OpenSCAD model generates **3D-printable multivariable calculus surfaces** in a variety of formats for teaching, demonstration, or exploration. You define a function `f(x,y)` over a rectangular domain, and the script can produce:
+This OpenSCAD code generates **3D-printable multivariable calculus surfaces** in a variety of formats for teaching, demonstration, or exploration. You define a function `f(x,y)` over a rectangular domain, and the script can produce:
 
 - The full 3D surface as a watertight solid (`MODE="solid"`)
 - A single slice in which **x = constant** (`MODE="slice_x"`), with a slot to fit onto a matching stand (`MODE="stand_x"`)
@@ -10,21 +10,35 @@ This OpenSCAD model generates **3D-printable multivariable calculus surfaces** i
 - A one-piece assembled model: stand(s) plus **all** `slice_y` slices (`MODE="all_slices_y"`)
 - The full solid cut into horizontal slabs (proof-of-concept) (`MODE="all_slices_z"`)
 
-All options are controlled by the `MODE` parameter at the top of [Slices.scad](Slices.scad).
-
 Everything is parameterized in the top section of [Slices.scad](Slices.scad), including the function, domain, scaling, number of slices, and stand locations.
+
+## Gallery
+
+Below are examples of 3D models produced with this repository. 
+
+![Hyperbolic paraboloid slices](images/hyperbolicparaboloid.jpeg)
+
+*Hyperbolic paraboloid* 
+
+![Elliptic paraboloid slices](images/ellipticparaboloid.jpeg)
+
+*Elliptic paraboloid* 
+
+![Assembled slices and stand](images/slices.jpeg)
+
+*Assembled slices and stand*
+
 
 ## Preset surfaces
 
-This repo supports preset surfaces defined in separate `.scad` files.
+The code contains a few predefined surfaces defined in separate `.scad` files.
 
-- Preset file added: [hyperbolic_paraboloid.scad](hyperbolic_paraboloid.scad)
-- Preset file added: [elliptic_paraboloid.scad](elliptic_paraboloid.scad)
-- Preset file added: [sombrero.scad](sombrero.scad)
-- In [Slices.scad](Slices.scad):
-   - Uncomment exactly one preset `include <...>;` line near the top.
-     - For custom mode, include [no_presets.scad](no_presets.scad)
-     - For a preset surface, include that preset file (e.g. [hyperbolic_paraboloid.scad](hyperbolic_paraboloid.scad))
+- [hyperbolic_paraboloid.scad](hyperbolic_paraboloid.scad)
+- [elliptic_paraboloid.scad](elliptic_paraboloid.scad)
+- [sombrero.scad](sombrero.scad)
+- In [Slices.scad](Slices.scad), uncomment exactly one preset `include <...>;` line near the top.
+   - For custom mode, include [no_presets.scad](no_presets.scad)
+   - For a preset surface, include that preset file (e.g. [hyperbolic_paraboloid.scad](hyperbolic_paraboloid.scad))
 
 Preset files use a simple, consistent interface:
 
@@ -33,14 +47,6 @@ function preset_f(x,y) = ...;
 // [xmin, ymin, x_span, y_span, z_scale, z_buffer, column_size_x, column_size_y, column_centers_mm]
 function preset_params() = [ ... ];
 ```
-
-## Quick start
-
-1. Open [Slices.scad](Slices.scad) in OpenSCAD.
-2. Edit the **PARAMETERS** section at the top.
-3. Press **F5** (Preview) for quick iteration, then **F6** (Render) before exporting.
-4. Export:
-   - **File → Export → Export as STL** (for 3D printing)
 
 ## Modes
 
@@ -55,20 +61,13 @@ Set `MODE` to one of the following:
 - `"all_slices_y"`: one-piece assembled model: stand(s) + **all** `slice_y` slices (no slots)
 - `"all_slices_z"`: proof-of-concept: full solid cut into `numslices` horizontal slabs by deleting thin horizontal boxes
 
-The file’s last section automatically builds the geometry for the selected `MODE`.
-
-Note on placement:
-
-- `MODE="slice_*"` and `MODE="stand_*"` are oriented/placed in the first quadrant for easy STL exporting/printing.
-- `MODE="solid"` and `MODE="all_slices_*"` are centered on the origin in XY (e.g. with `x_length=80`, `x` runs from `-40` to `+40`).
-
 For `MODE="all_slices_z"`, the bottom slab sits on the XY plane (`z=0`). Each slab has thickness `slice_thickness`, the vertical pitch rule is based on the X-direction slice spacing (approximately `x_length/(numslices-1)` mm), and the number of slabs is computed automatically from the sampled maximum height of the surface.
 
 If you see a tiny “top remnant” slab, you can nudge the pitch via:
 
-- `slab_pitch_mult` (default `0.92`; try `1.01`)
+- `slab_pitch_mult` (default `1.0`; try `1.03`, `0.97`, and so on)
 
-`MODE="all_slices_z"` also supports optional vertical columns (useful as built-in supports). In [Slices.scad](Slices.scad), set:
+`MODE="all_slices_z"` also supports vertical columns as built-in support. In [Slices.scad](Slices.scad), set:
 
 - `column_size_x`, `column_size_y` (mm)
 - `column_centers_mm = [[x0,y0], [x1,y1], ...]`
@@ -91,7 +90,6 @@ Notes:
 
 - `x` and `y` are *mathematical* coordinates over your chosen domain.
 - OpenSCAD’s `sin/cos/tan` expect **degrees**. This file includes helpers `sin_rad`, `cos_rad`, `tan_rad` for radians.
-- If your function has a removable singularity (e.g. `sin(r)/r`), use `let(...)` and conditionals (see the commented example in [Slices.scad](Slices.scad)).
 
 ## Domain, scaling, and physical size
 
@@ -128,8 +126,6 @@ If your surface looks clipped or overly tall/flat, adjust `z_scale` (or the pres
    - `MODE = "solid";`
 2. Optionally increase smoothness (slower renders):
    - `solid_nx`, `solid_ny`
-3. Press **F6** to render.
-4. Export as STL.
 
 ## Generating slices (and stands)
 
@@ -143,24 +139,6 @@ Slices are **evenly spaced** across the chosen domain:
 - `slice_x`: holds \(x\) constant and varies \(y\)
 - `slice_y`: holds \(y\) constant and varies \(x\)
 
-### Workflow (recommended)
-
-Pick one slice direction (you can do both, but start with one):
-
-1. Choose:
-   - `MODE = "slice_x";` (or `"slice_y"`)
-2. Set `numslices`.
-3. For each `k = 1..numslices`:
-   - set `k`
-   - **F6** render
-   - export STL (name it something like `slice_x_k05_of_07.stl`)
-4. Generate the matching stand:
-   - set `MODE = "stand_x";` (or `"stand_y"`)
-   - **F6** render
-   - export STL (e.g. `stand_x.stl`)
-
-Print the slices and the matching stand, then slide each slice into the corresponding slot.
-
 ## Generating a one-piece assembled model (stand + all slices)
 
 If you want the “complete classroom object” as one STL (no assembly, no slots):
@@ -171,50 +149,17 @@ If you want the “complete classroom object” as one STL (no assembly, no slot
 3. Set `stand_locations` to control where the stand(s) sit along the slice length.
    - Example: `stand_locations = [0.5];` places the stand halfway along every slice.
    - Example: `stand_locations = [0.25, 0.75];` places two stands.
-4. **F6** render, then export STL.
 
-The assembled modes still use the same vertical shifting/lift as the individual slice profiles, but they omit the notch cutouts so everything is a single `union()`.
+For the horizontal-slab variant use `MODE = "all_slices_z"` (proof-of-concept):
 
-## Slot fit (tolerance) and layout
+1. Set:
+   - `MODE = "all_slices_z";`
+2. Set `numslices` (controls sampling/stacking used to compute slab count).
+3. Adjust slab parameters:
+   - `slice_thickness` (mm) controls individual slab thickness.
+   - `slab_pitch_mult` (multiplier for vertical pitch; default `1.0`) nudges the vertical spacing — if you see a tiny top remnant slab, try values slightly above or below `1.0` (e.g. `1.01` or `0.97`).
+4. Optional vertical columns/supports:
+   - Set `column_size_x`, `column_size_y` (mm) and `column_centers_mm = [[x0,y0], ...]` to add rectangular columns under the surface. Columns are capped at the top of the highest remaining slab and will not extend into deleted gap regions.
+5. Note: the bottom slab sits on the XY plane (`z=0`). 
 
-Slots are cut into the bottom of each slice, and matching slots are cut into the stand.
-
-This section applies to `MODE="slice_*"` and `MODE="stand_*"`. The assembled modes (`MODE="all_slices_*"`) do **not** cut slots.
-
-Key parameters:
-
-- `slice_thickness` (mm): the extrusion thickness of each slice
-- `clearance` (mm): extra width added to the slot opening for easier assembly
--- `slot_h` (mm): slot depth/height
--- `stand_locations`: where along the slice length slots/stands are placed for the per-slice/stand modes
-   - Example: `stand_locations = [0.25, 0.75];` places two slots/stands at 1/4 and 3/4 of the slice length.
-
-In the assembled modes, `stand_locations` controls where the stand(s) are placed along the slice length.
-
-The actual slot opening used is:
-
-- `slot_opening_w = slice_thickness + clearance;`
-
-If the fit is too tight, increase `clearance` (typical 0.15–0.40 mm depending on printer/material).
-
-## Print notes
-
-- The script orients stands in a print-friendly way; slices are simple extrusions and usually print well as-is.
-- If you plan to laser-cut instead of 3D print, you can adapt the 2D profiles, but this repo currently targets STL output.
-
-## Troubleshooting
-
-- **Render is slow**: lower `solid_nx/solid_ny` (solid) or `n_samples` (slices).
-- **Surface looks faceted**: increase `solid_nx/solid_ny`.
-- **Slices have missing/not-visible slots**: try moving `slot_positions` inward (e.g. `[0.5]`), or increase `n_samples`. The script already computes an “effective” length so slots don’t land beyond the nonzero part of the slice, but extreme functions/domains can still benefit from tuning.
-- **Assembled model is hard to print**: try fewer slices (`numslices`), reduce `x_length/y_length`, or add additional stands via `slot_positions` for stability.
-- **Model appears shifted/scaled oddly**: re-check `xmin/ymin/x_span/y_span` vs `x_length/y_length` vs `z_scale` (or the preset’s `preset_params()` if using a preset file).
-
-## Suggested classroom-friendly defaults
-
-- Keep `x_length`/`y_length` around 80–140 mm so the model fits most printers.
-- Use `numslices = 5` to `9` for a nice balance of clarity and print time.
-
-## Contributing
-
-Issues and pull requests are welcome—especially additional example surfaces, parameter presets, and print-verified tolerance recommendations.
+Note: Printing the z=constant models can be a challenge. One option is to rotate the model 90° so that the horizontal slices are vertical. Still, many shapes require quite a bit of printing support.
