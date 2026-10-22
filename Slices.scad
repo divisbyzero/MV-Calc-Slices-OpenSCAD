@@ -7,16 +7,29 @@
 ///////////////////////// PARAMETERS //////////////////////////
 ///////////////////////////////////////////////////////////////
 
+// MODE options:
+//   "slice_x" produces a slice in which x=constant; it has a slot to fit onto stand_x
+//   "slice_y" produces a slice in which y=constant; it has a slot to fit onto stand_y
+//   "stand_x" produces a stand for slice_x
+//   "stand_y" produces a stand for slice_y
+//   "all_slices_x" produces the stand_x plus all slice_x pieces as a single model
+//   "all_slices_y" produces the stand_y plus all slice_y pieces as a single model
+//   "all_slices_z" produces a solid cut into horizontal slices (proof-of-concept via deleting gap boxes)
+//   "solid" produces the full 3D surface solid
+
 // Choose the type of object to generate
-MODE = "solid";          // "slice_x" | "slice_y" | "stand_x" | "stand_y" | "all_slices_x" | "all_slices_y" | "all_slices_z" | "solid"
-                         // "slice_x" produces a slice in which x=constant; it has a slot to fit onto stand_x
-                         // "slice_y" produces a slice in which y=constant; it has a slot to fit onto stand_y
-                         // "stand_x" produces a stand for slice_x
-                         // "stand_y" produces a stand for slice_y
-                         // "all_slices_x" produces the stand_x plus all slice_x pieces as a single model
-                         // "all_slices_y" produces the stand_y plus all slice_y pieces as a single model
-                         // "all_slices_z" produces a solid cut into horizontal slices (proof-of-concept via deleting gap boxes)
-                         // "solid" produces the full 3D surface solid
+MODE = "slice_y"; // [slice_x, slice_y, stand_x, stand_y, all_slices_x, all_slices_y, all_slices_z, solid]
+
+// Punch text-shaped holes near the bottom of the slice (MODE="slice_x" or "slice_y")
+show_text = true;
+// Text to punch out. Supports x^2, x^{10}, x_1, x_{12}, \frac{num}{den} (in a .scad file, write \\frac)
+text_for_slice = "z=x^2";
+// mm - approximate height of a capital letter
+text_size = 4;
+// mm - distance from the bottom edge of the slice to the lowest point of the text
+text_offset = 1.5;
+// location along the slice (0 = left end, 1 = right end); keep away from stand_locations
+text_location = 0.5;
 
 
 //////
@@ -373,6 +386,112 @@ module slice2D_outline(k_=k, const_axis, slot_lift=true) {
     polygon(points = concat([bottom_left, bottom_right], reverse_list(top)));
 }
 
+///////////////////////////////////////////////////////////////
+// Slice label: a tiny LaTeX-like subset rendered as 2D text.
+// Supported: ^x, ^{...}, _x, _{...}, \frac{...}{...} (also written as frac{...}{...}), {...}
+// A monospace font is used so glyph widths are known without textmetrics().
+// Parse tree nodes: ["t", char] | ["sup", nodes] | ["sub", nodes] | ["frac", num, den] | ["grp", nodes]
+label_font     = "Liberation Mono";
+label_adv      = 0.8335;  // glyph advance per unit of text size (Liberation Mono)
+label_cap      = 0.92;    // cap/digit height per unit of text size
+label_script   = 0.6;     // scale for superscripts/subscripts
+label_frac     = 0.75;    // scale for numerator/denominator
+label_axis     = 0.45;    // fraction bar height above baseline, per unit of text size
+label_gap      = 0.15;    // gap between fraction bar and num/den, per unit of text size
+label_bar      = 0.1;     // fraction bar thickness, per unit of text size
+label_desc     = 0.29;    // descender depth (g, j, p, q, y, comma), per unit of text size
+
+function label_starts(s, i, w) =
+    (i + len(w) <= len(s)) && (len([for (j=[0:len(w)-1]) if (s[i+j] != w[j]) j]) == 0);
+
+// Returns [nodes, next_index]; stops at end of string or an unmatched "}".
+function label_parse_seq(s, i=0, acc=[]) =
+    (i >= len(s) || s[i] == "}") ? [acc, i] :
+    let(r = label_parse_item(s, i)) label_parse_seq(s, r[1], concat(acc, [r[0]]));
+
+// A braced group or a single item.
+function label_parse_group(s, i) =
+    (i >= len(s)) ? [[], i] :
+    (s[i] == "{") ? let(r = label_parse_seq(s, i+1)) [r[0], r[1]+1] :
+    let(r = label_parse_item(s, i)) [[r[0]], r[1]];
+
+function label_parse_item(s, i) =
+    (s[i] == "^" || s[i] == "_") ?
+        let(g = label_parse_group(s, i+1)) [[s[i] == "^" ? "sup" : "sub", g[0]], g[1]] :
+    (label_starts(s, i, "\\frac") || label_starts(s, i, "frac{")) ?
+        let(i0 = (s[i] == "\\") ? i+5 : i+4,
+            a = label_parse_group(s, i0),
+            b = label_parse_group(s, a[1]))
+        [["frac", a[0], b[0]], b[1]] :
+    (s[i] == "{") ?
+        let(r = label_parse_seq(s, i+1)) [["grp", r[0]], r[1]+1] :
+    [["t", s[i]], i+1];
+
+function label_sum(v) = len(v) == 0 ? 0 : v[0] + label_sum([for (j=[1:1:len(v)-1]) v[j]]);
+
+// Widths/heights/depths in units of text size, for a node list drawn at scale sc.
+function label_width(nodes, sc) = label_sum([for (n = nodes) label_node_width(n, sc)]);
+function label_node_width(n, sc) =
+    (n[0] == "t")    ? label_adv*sc :
+    (n[0] == "sup" || n[0] == "sub") ? label_width(n[1], sc*label_script) :
+    (n[0] == "frac") ? max(label_width(n[1], sc*label_frac), label_width(n[2], sc*label_frac)) + 0.2*sc :
+    label_width(n[1], sc);
+
+function label_height(nodes, sc) = max(concat([0], [for (n = nodes) label_node_height(n, sc)]));
+function label_node_height(n, sc) =
+    (n[0] == "t")    ? label_cap*sc :
+    (n[0] == "sup")  ? 0.5*label_cap*sc + label_height(n[1], sc*label_script) :
+    (n[0] == "sub")  ? label_height(n[1], sc*label_script) - 0.25*label_cap*sc :
+    (n[0] == "frac") ? (label_axis + label_gap)*sc + label_depth(n[1], sc*label_frac) + label_height(n[1], sc*label_frac) :
+    label_height(n[1], sc);
+
+function label_depth(nodes, sc) = max(concat([0], [for (n = nodes) label_node_depth(n, sc)]));
+function label_node_depth(n, sc) =
+    (n[0] == "t")    ? (len(search(n[1], "gjpqy,;")) > 0 ? label_desc*sc : 0) :
+    (n[0] == "sup")  ? label_depth(n[1], sc*label_script) - 0.5*label_cap*sc :
+    (n[0] == "sub")  ? 0.25*label_cap*sc + label_depth(n[1], sc*label_script) :
+    (n[0] == "frac") ? label_height(n[2], sc*label_frac) + label_depth(n[2], sc*label_frac) - (label_axis - label_gap)*sc :
+    label_depth(n[1], sc);
+
+// Draw a node list with its baseline at y=0 starting at x=0 (units of text size).
+module label_nodes2D(nodes, sc) {
+    for (j = [0:1:len(nodes)-1]) {
+        x0 = label_width([for (m=[0:1:j-1]) nodes[m]], sc);
+        translate([x0, 0]) label_node2D(nodes[j], sc);
+    }
+}
+
+module label_node2D(n, sc) {
+    if (n[0] == "t") {
+        text(n[1], size=sc, font=label_font, halign="left", valign="baseline");
+    } else if (n[0] == "sup") {
+        translate([0, 0.5*label_cap*sc]) label_nodes2D(n[1], sc*label_script);
+    } else if (n[0] == "sub") {
+        translate([0, -0.25*label_cap*sc]) label_nodes2D(n[1], sc*label_script);
+    } else if (n[0] == "frac") {
+        fs = sc*label_frac;
+        w  = label_node_width(n, sc);
+        wn = label_width(n[1], fs);
+        wd = label_width(n[2], fs);
+        translate([(w - wn)/2, (label_axis + label_gap)*sc + label_depth(n[1], fs)])
+            label_nodes2D(n[1], fs);
+        translate([(w - wd)/2, (label_axis - label_gap)*sc - label_height(n[2], fs)])
+            label_nodes2D(n[2], fs);
+        translate([0.05*sc, (label_axis - label_bar/2)*sc])
+            square([w - 0.1*sc, label_bar*sc]);
+    } else {
+        label_nodes2D(n[1], sc);
+    }
+}
+
+// The label, centered horizontally at x=0, with its lowest point at y=0, in mm.
+module slice_label2D(str, size) {
+    nodes = label_parse_seq(str)[0];
+    scale(size)
+        translate([-label_width(nodes, 1)/2, label_depth(nodes, 1)])
+            label_nodes2D(nodes, 1);
+}
+
 module slice3D(k_=k, const_axis) {
     // Some parameter combos place the profile at/near z=0 before reaching the slice end.
     // If we place a slot beyond the last nonzero profile point, it won't appear.
@@ -416,6 +535,11 @@ module slice3D(k_=k, const_axis) {
                 translate([ slot_x - slot_opening_w/2, -1, -1 ])
                     cube([ slot_opening_w, slot_h + 1, slice_thickness + 2 ], center=false);
             }
+
+            if (show_text && len(text_for_slice) > 0)
+                translate([ lerp(-slice_len/2, slice_len/2, text_location), text_offset, -1 ])
+                    linear_extrude(height = slice_thickness + 2, convexity=10)
+                        slice_label2D(text_for_slice, text_size);
         }
     }
 }
