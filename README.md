@@ -44,9 +44,13 @@ Preset files use a simple, consistent interface:
 
 ```scad
 function preset_f(x,y) = ...;
-// [xmin, ymin, x_span, y_span, z_scale, z_buffer, column_size_x, column_size_y, column_centers_mm]
+// [xmin, ymin, x_span, y_span, column_size_x, column_size_y, column_centers_mm]
 function preset_params() = [ ... ];
 ```
+
+`preset_f` returns the mathematical height over the domain. Preset functions in
+this repository include coefficients that preserve their previous default
+models under uniform XYZ scaling.
 
 ## Modes
 
@@ -93,28 +97,26 @@ Notes:
 
 ## Domain, scaling, and physical size
 
-These parameters control how math coordinates map to millimeters:
+The domain is mapped uniformly into the physical object:
 
 - **Domain** (math units)
-   - `xmin`, `ymin`
-   - `x_span`, `y_span`
+  - `xmin`, `ymin`
+  - `x_span`, `y_span`
 - **Physical size** (mm)
   - `x_length`, `y_length`
-- **Vertical scaling**
-   - `z_scale` (mm per math unit)
-   - `z_buffer` (mm)
 
-When using a preset surface file, the domain/scaling parameters come from that file’s `preset_params()` instead of the values you set in [Slices.scad](Slices.scad).
+`y_length` is derived from the domain aspect ratio. One mathematical unit in
+the X, Y, and Z directions is scaled by `x_length / x_span` millimeters.
+Consequently, the mathematical function is not independently stretched or
+translated vertically; its units and values determine the shape and height.
+To change its height or vertical position, edit the function itself.
 
-In terms of the math-defined height in millimeters,
-
-- `f_mm(x,y) = z_scale * f(x,y)`
-- unclipped surface height is:
-   - `z_surface_mm(x,y) = z_buffer + f_mm(x,y)`
+When using a preset surface file, its domain and support-column parameters
+come from that file’s `preset_params()`; the function comes from `preset_f`.
 
 The solid/slices then use the clipped height:
 
-- `z_solid_mm(x,y) = max(0, z_surface_mm(x,y))`
+- `z_solid_mm(x,y) = max(0, (x_length / x_span) * f(x,y))`
 
 The generated 3D solid only includes the portion of this surface **above the XY plane** (`z>=0`). If the surface dips below `z=0`, those regions contribute no volume.
 
@@ -122,7 +124,8 @@ Slice profiles (used by `MODE="slice_*"` and also by the assembled modes) use th
 
 - `z_slice_mm(x,y) = z_solid_mm(x,y)`
 
-If your surface looks clipped or overly tall/flat, adjust `z_scale` (or the preset’s `z_scale` in `preset_params()`).
+If your surface is clipped by the XY plane, change the function so more of it
+lies above zero. Changing `x_length` scales X, Y, and Z together.
 
 ## Generating a full surface solid
 

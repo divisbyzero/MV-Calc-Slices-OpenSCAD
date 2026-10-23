@@ -45,8 +45,9 @@ include <hyperbolic_paraboloid2.scad>;
 
 // Custom parameters
 // These only apply when using no_presets.scad
-// Custom function
-function f_user(x,y) = -x*x-2*y*y+2; // Note: sin_rad, cos_rad, tan_rad are trig functions that accept radians
+// Custom function. The coefficient preserves the previous default model height
+// while using the same physical scale for X, Y, and Z.
+function f_user(x,y) = (30*2*sqrt(2)/80)*(-x*x-2*y*y+2); // Note: sin_rad, cos_rad, tan_rad are trig functions that accept radians
 
 // Domain: [xmin,xmin+x_span] x [ymin,ymin+y_span]
 // Note: if the domain is not a square, then keeping the same number of traces will yield traces that are spaced by different amounts in the two directions
@@ -54,11 +55,6 @@ xmin       = -sqrt(2);         // math x-min
 ymin       = -1;         // math y-min
 x_span     = 2*sqrt(2);          // math width in x-direction
 y_span     = 2;          // math width in y-direction
-// Function in mm: z = z_buffer + z_scale*f(x,y)
-z_scale    = 30;         // mm - z_scale * f(x,y) is the function value in mm
-z_buffer   = 0;          // mm - additional vertical translation above the minimum
-                         // z_buffer=0 will put the lowest point of the surface at z=0
-                         // z_buffer=stand_height will put the lowest point at the top of the stand
 // Vertical columns to support the horizontal slices when using MODE="all_slices_z"
 // Column centers are specified in model XY coordinates (mm) where the solid is centered on the origin.
 column_size_x = 3;        // mm - column size in X
@@ -116,10 +112,9 @@ solid_ny   = 120;        // surface sampling in Y (higher = smoother, slower)
 
 // Parameter bundle selected by SOURCE.
 // Preset interface:
-//   preset_params() = [xmin, ymin, x_span, y_span, z_scale, z_buffer,
+//   preset_params() = [xmin, ymin, x_span, y_span,
 //                      column_size_x, column_size_y, column_centers_mm]
-// Backwards compatible: if a preset only returns the first 6 entries, column defaults apply.
-params_user = [xmin, ymin, x_span, y_span, z_scale, z_buffer, column_size_x, column_size_y, column_centers_mm];
+params_user = [xmin, ymin, x_span, y_span, column_size_x, column_size_y, column_centers_mm];
 params = (SOURCE=="FROM_FILE") ? preset_params() : params_user;
 
 // Selected (effective) parameters used by the rest of the file.
@@ -129,14 +124,10 @@ ymin_eff   = params[1];
 x_span_eff = params[2];
 y_span_eff = params[3];
 
-// Vertical scaling
-z_scale_eff  = params[4];
-z_buffer_eff = params[5];
-
 // Column sizing/placement (effective)
-column_size_x_eff = (len(params) > 6) ? params[6] : 3;
-column_size_y_eff = (len(params) > 7) ? params[7] : 3;
-column_centers_mm_eff = (len(params) > 8) ? params[8] : [];
+column_size_x_eff = (len(params) > 4) ? params[4] : 3;
+column_size_y_eff = (len(params) > 5) ? params[5] : 3;
+column_centers_mm_eff = (len(params) > 6) ? params[6] : [];
 
 
 // Selected surface function
@@ -183,8 +174,8 @@ function yk_from_k(k_) =
     (numslices<=1) ? ymin_eff :
     lerp(ymin_eff, ymin_eff + y_span_eff, (k_-1)/(numslices-1));
 
-// Convert f(x,y) to mm (unshifted)
-function f_mm(xm, ym) = z_scale_eff * f(xm, ym);
+// Apply the same physical scale to Z as to X and Y.
+function f_mm(xm, ym) = (x_length/x_span_eff) * f(xm, ym);
 
 // Estimate minimum of f_mm over the domain by sampling
 function z_min_raw() =
@@ -207,11 +198,11 @@ function z_max_raw() =
     ]);
 
 // Surface height in mm (may be negative)
-function z_surface_mm(xm, ym) = z_buffer_eff + f_mm(xm, ym);
+function z_surface_mm(xm, ym) = f_mm(xm, ym);
 
 // Cache sampled min/max of the surface over the domain (mm)
-z_surface_min = z_buffer_eff + z_min_raw();
-z_surface_max = z_buffer_eff + z_max_raw();
+z_surface_min = z_min_raw();
+z_surface_max = z_max_raw();
 
 // "z_min" and "z_max" are of the actual, clipped surface height over the domain (mm)
 // (the solid only exists above the XY plane).
@@ -522,7 +513,7 @@ module slice3D(k_=k, const_axis) {
     slot_ref_len = (len(nonzero_idx) == 0) ? slice_len : (slice_len * max(nonzero_idx) / n_samples);
 
     if (slice_max_z <= eps) {
-        echo("Empty slice after z>=0 clipping. Try increasing z_buffer (or the preset's z_buffer), or choose a different k.",
+        echo("Empty slice after z>=0 clipping. Change the function or choose a different k.",
              MODE=MODE, const_axis=const_axis, k=k_, xk=xk, yk=yk, z_max_along_slice=slice_max_z);
     } else {
         difference() {
@@ -839,11 +830,11 @@ if (MODE=="slice_x") {
     all_slices_assembled("y");
 } else if (MODE=="all_slices_z") {
     if (z_max <= 0)
-        echo("Surface never rises above z=0; clipped solid will be empty. Increase z_buffer or change f(x,y).", z_max=z_max);
+        echo("Surface never rises above z=0; clipped solid will be empty. Change f(x,y).", z_max=z_max);
     all_slices_z();
 } else if (MODE=="solid") {
     if (z_max <= 0)
-        echo("Surface never rises above z=0; clipped solid will be empty. Increase z_buffer or change f(x,y).", z_max=z_max);
+        echo("Surface never rises above z=0; clipped solid will be empty. Change f(x,y).", z_max=z_max);
     solid3D();
 } else {
     echo("Unknown MODE. Use: slice_x | slice_y | stand_x | stand_y | all_slices_x | all_slices_y | all_slices_z | solid");

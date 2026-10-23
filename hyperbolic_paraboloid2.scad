@@ -7,11 +7,13 @@
 //
 // Standard preset interface expected by Slices.scad:
 //   - function preset_f(x,y)
-//   - function preset_params() = [xmin,ymin,x_span,y_span,z_scale,z_buffer,column_size_x,column_size_y,column_centers_mm]
+//   - function preset_params() = [xmin,ymin,x_span,y_span,column_size_x,column_size_y,column_centers_mm]
 
 SOURCE = "FROM_FILE";
 
-function preset_f(x, y) = 1*(x*x/4 - y*y/2)+5;
+// Includes the former vertical scale and offset, normalized to preserve the
+// default 80 mm-wide model under uniform XYZ scaling.
+function preset_f(x, y) = 0.75*(1 + (x*x/4 - y*y/2)+5);
 
 // Default parameter suggestion for this preset.
 // To use custom values instead, include no_presets.scad in Slices.scad.
@@ -20,10 +22,7 @@ function preset_params() = [
     -3,  // ymin
      6,  // x_span
      6,  // y_span
-     10,  // z_scale
-     10,  // z_buffer
      3,  // column_size_x
      3,  // column_size_y
     [[-38.5,0],[38.5,0]]  // column_centers_mm
 ];
-
