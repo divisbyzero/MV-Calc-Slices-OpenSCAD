@@ -39,13 +39,13 @@ The code contains a few predefined surfaces defined in separate `.scad` files, a
 - [elliptic_paraboloid_for_lab.scad](elliptic_paraboloid_for_lab.scad)
 - [sombrero.scad](sombrero.scad)
 
-Choose one with the `SURFACE` dropdown (in the Customizer, or near the top of [Slices.scad](Slices.scad)). Choose `custom` to use your own function and parameters (`f_user`, `xmin`, `ymin`, `x_span`, `y_span`, and the column settings) in [Slices.scad](Slices.scad).
+Choose one with the `SURFACE` dropdown (in the Customizer, or near the top of [Slices.scad](Slices.scad)). Choose `custom` to use your own function and parameters (`f_user`, `xmin`, `ymin`, `zmin`, `x_span`, `y_span`, `z_span`, and the column settings) in [Slices.scad](Slices.scad).
 
 Each preset file named `<name>.scad` provides two functions:
 
 ```scad
 function <name>_f(x,y) = ...;
-// [xmin, ymin, x_span, y_span, column_size_x, column_size_y, column_centers]
+// [xmin, ymin, zmin, x_span, y_span, z_span, column_size_x, column_size_y, column_centers]
 function <name>_params() = [ ... ];
 ```
 
@@ -66,13 +66,9 @@ Set `MODE` to one of the following:
 - `"stand_y"`: stand that mates with `slice_y`
 - `"all_slices_x"`: one-piece assembled model: stand(s) + **all** `slice_x` slices (no slots)
 - `"all_slices_y"`: one-piece assembled model: stand(s) + **all** `slice_y` slices (no slots)
-- "all_slices_z": full solid cut into horizontal slabs by deleting thin horizontal boxes (slab count is computed automatically)
+- "all_slices_z": full solid cut into horizontal slabs by deleting thin horizontal boxes (one slab per level from `zmin` to `zmin+z_span`)
 
-For `MODE="all_slices_z"`, the bottom slab sits on the XY plane (`z=0`). Each slab has thickness `slice_thickness`, the vertical pitch rule is based on the X-direction slice spacing (approximately `x_length/(numslices-1)` mm), and the number of slabs is computed automatically from the sampled maximum height of the surface.
-
-If you see a tiny “top remnant” slab, you can nudge the pitch via:
-
-- `slab_pitch_mult` (default `1.0`; try `1.03`, `0.97`, and so on)
+For `MODE="all_slices_z"`, the interval `[zmin, zmin+z_span]` is divided into `numslices` evenly spaced levels. Each slab has thickness `slice_thickness` and sits on one of these levels, with the bottom slab (at `f=zmin`) on the XY plane. A level gets a slab only if the surface rises above it. For example, if `zmin+z_span` is the maximum of `f`, the top level only touches the surface at a point or a curve, so it gets no slab, leaving `numslices-1` slabs.
 
 `MODE="all_slices_z"` also supports vertical columns as built-in support. In [Slices.scad](Slices.scad), set:
 
@@ -105,23 +101,26 @@ The domain is mapped uniformly into the physical object:
 - **Domain** (math units)
   - `xmin`, `ymin`
   - `x_span`, `y_span`
+- **Height range** (math units)
+  - `zmin`: the bottom of the model; only the part of the solid with `f >= zmin` is kept
+  - `z_span`: with `zmin`, sets the levels used by `MODE="all_slices_z"`
 - **Physical size** (mm)
   - `x_length`, `y_length`
 
 `y_length` is derived from the domain aspect ratio. One mathematical unit in
 the X, Y, and Z directions is scaled by `x_length / x_span` millimeters.
-Consequently, the mathematical function is not independently stretched or
-translated vertically; its units and values determine the shape and height.
-To change its height or vertical position, edit the function itself.
+Consequently, the mathematical function is not independently stretched
+vertically; its units and values determine the shape and height. The value
+`f = zmin` sits at the bottom of the model (`z = 0` mm).
 
 When using a preset surface, its domain and support-column parameters
-come from that file’s `<name>_params()`; the function comes from `<name>_f`.
+(as well as `zmin` and `z_span`) come from that file’s `<name>_params()`; the function comes from `<name>_f`.
 
 The solid/slices then use the clipped height:
 
-- `z_solid_mm(x,y) = max(0, (x_length / x_span) * f(x,y))`
+- `z_solid_mm(x,y) = max(0, (x_length / x_span) * (f(x,y) - zmin))`
 
-The generated 3D solid only includes the portion of this surface **above the XY plane** (`z>=0`). If the surface dips below `z=0`, those regions contribute no volume.
+The generated 3D solid only includes the portion of this surface **above the XY plane**, i.e. where `f(x,y) >= zmin`. If the surface dips below `zmin`, those regions contribute no volume.
 
 Slice profiles (used by `MODE="slice_*"` and also by the assembled modes) use the same height map:
 
@@ -164,12 +163,11 @@ For the horizontal-slab variant use `MODE = "all_slices_z"`:
 
 1. Set:
    - `MODE = "all_slices_z";`
-2. Set `numslices` (controls the vertical pitch via approximately `x_length/(numslices-1)` mm).
+2. Set `numslices`, `zmin`, and `z_span`: the interval `[zmin, zmin+z_span]` is divided into `numslices` evenly spaced levels, and each level that the surface rises above gets a slab.
 3. Adjust slab parameters:
    - `slice_thickness` (mm) controls individual slab thickness.
-   - `slab_pitch_mult` (multiplier for vertical pitch; default `1.0`) nudges the vertical spacing — if you see a tiny top remnant slab, try values slightly above or below `1.0` (e.g. `1.01` or `0.97`).
 4. Optional vertical columns/supports:
    - Set `column_size_x`, `column_size_y` (mm) and `column_centers = [[x0,y0], ...]` (relative positions; see above) to add rectangular columns under the surface. Columns are capped at the top of the highest remaining slab and will not extend into deleted gap regions.
-5. Note: the bottom slab sits on the XY plane (`z=0`). 
+5. Note: the bottom slab (at `f=zmin`) sits on the XY plane. 
 
 Note: Printing the z=constant models can be a challenge. One option is to rotate the model 90° so that the horizontal slices are vertical. Still, many shapes require quite a bit of printing support.

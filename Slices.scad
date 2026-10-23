@@ -57,6 +57,10 @@ xmin       = -sqrt(2);         // math x-min
 ymin       = -1;         // math y-min
 x_span     = 2*sqrt(2);          // math width in x-direction
 y_span     = 2;          // math width in y-direction
+// Height: the bottom of the model is at f=zmin (the solid only includes f>=zmin).
+// For MODE="all_slices_z", [zmin, zmin+z_span] is divided into numslices evenly spaced levels.
+zmin       = 0;          // math z-min
+z_span     = (30*2*sqrt(2)/80)*2;  // math height (here, the maximum of f_user on the domain)
 // Vertical columns to support the horizontal slices when using MODE="all_slices_z"
 // Column centers are specified in model XY coordinates (mm) where the solid is centered on the origin.
 column_size_x = 3;        // mm - column size in X
@@ -70,7 +74,7 @@ column_centers = [[0,0]];   // list of [x_rel, y_rel] centers in [-1,1]; empty =
 //////
 // Slice parameters
 //////
-numslices  = 9;          // the total number of traces (for MODE="slice_x" or "slice_y" or "all_slices_x" or "all_slices_y". It will also determine the spacing of horizontal slices in MODE="all_slices_z")
+numslices  = 9;          // the total number of traces (for MODE="slice_x" or "slice_y" or "all_slices_x" or "all_slices_y". For MODE="all_slices_z", [zmin, zmin+z_span] is divided into numslices evenly spaced levels, each with a slab unless the surface does not rise above it)
 k          = 4;          // slice number to generate: 1...numslices (for MODE="slice_x" or "slice_y")
 stand_locations = [0.3, 0.7];  // locations for the stands: for instance, stand_locations = [0.25, 0.75] would yield stands at 1/4 and 3/4 of the slice length (for the MODE="stand_x" or "stand_y" or "all_slices_x" or "all_slices_y")
 
@@ -85,9 +89,6 @@ stand_height   = 10;         // mm - height of the slice stands (for MODE="slice
 stand_margin  = 5;       // mm - distance the stand extends beyond the last slice (for MODE="stand_x", "stand_y")
 assembled_stand_margin = 0; // mm - extra overhang for stand beams in MODE="all_slices_x"/"all_slices_y" (0 = flush with outermost slices)
 
-// Horizontal-slab pitch fudge factor (used by MODE="all_slices_z")
-// Use this to adjust the spacing between horizontal slabs to avoid tiny top slices.
-slab_pitch_mult = 1;  // 1.00 = same spacing as the vertical slices, 1.01 = 1% larger spacing
 
 // Sampling resolutions
 zmin_nx    = 80;         // sampling resolution for z_min estimate (x)
@@ -115,9 +116,9 @@ solid_ny   = 120;        // surface sampling in Y (higher = smoother, slower)
 
 
 // Parameter bundle selected by SURFACE.
-// Each preset file provides <name>_params() = [xmin, ymin, x_span, y_span,
+// Each preset file provides <name>_params() = [xmin, ymin, zmin, x_span, y_span, z_span,
 //                                              column_size_x, column_size_y, column_centers]
-params_user = [xmin, ymin, x_span, y_span, column_size_x, column_size_y, column_centers];
+params_user = [xmin, ymin, zmin, x_span, y_span, z_span, column_size_x, column_size_y, column_centers];
 params =
     (SURFACE=="hyperbolic_paraboloid")  ? hyperbolic_paraboloid_params() :
     (SURFACE=="hyperbolic_paraboloid_for_lab") ? hyperbolic_paraboloid_for_lab_params() :
@@ -128,15 +129,18 @@ params =
 
 // Selected (effective) parameters used by the rest of the file.
 // Domain: [xmin_eff,xmin_eff+x_span_eff] x [ymin_eff,ymin_eff+y_span_eff]
+// Height range: [zmin_eff, zmin_eff+z_span_eff]
 xmin_eff   = params[0];
 ymin_eff   = params[1];
-x_span_eff = params[2];
-y_span_eff = params[3];
+zmin_eff   = params[2];
+x_span_eff = params[3];
+y_span_eff = params[4];
+z_span_eff = params[5];
 
 // Column sizing/placement (effective)
-column_size_x_eff = (len(params) > 4) ? params[4] : 3;
-column_size_y_eff = (len(params) > 5) ? params[5] : 3;
-column_centers_eff = (len(params) > 6) ? params[6] : [];
+column_size_x_eff = (len(params) > 6) ? params[6] : 3;
+column_size_y_eff = (len(params) > 7) ? params[7] : 3;
+column_centers_eff = (len(params) > 8) ? params[8] : [];
 
 
 // Selected surface function
@@ -190,7 +194,9 @@ function yk_from_k(k_) =
     lerp(ymin_eff, ymin_eff + y_span_eff, (k_-1)/(numslices-1));
 
 // Apply the same physical scale to Z as to X and Y.
-function f_mm(xm, ym) = (x_length/x_span_eff) * f(xm, ym);
+// f = zmin_eff sits at z = 0 mm (the bottom of the model).
+mm_per_unit = x_length/x_span_eff;
+function f_mm(xm, ym) = mm_per_unit * (f(xm, ym) - zmin_eff);
 
 // Estimate minimum of f_mm over the domain by sampling
 function z_min_raw() =
@@ -220,7 +226,7 @@ z_surface_min = z_min_raw();
 z_surface_max = z_max_raw();
 
 // "z_min" and "z_max" are of the actual, clipped surface height over the domain (mm)
-// (the solid only exists above the XY plane).
+// (the solid only exists above the XY plane, i.e. where f >= zmin_eff).
 z_min = max(0, z_surface_min);
 z_max = max(0, z_surface_max);
 
@@ -670,12 +676,13 @@ module all_slices_assembled(const_axis) {
 }
 
 // Proof-of-concept horizontal slicing:
-// Cut the full solid into numslices horizontal slabs by deleting thin horizontal boxes.
-// Spacing rule (as requested): use the same spacing as the X-direction slice spacing.
-// In this file, that spacing is x_length/(numslices-1) mm.
+// Cut the full solid into horizontal slabs by deleting thin horizontal boxes.
+// Slab bottoms sit at numslices evenly spaced levels from f=zmin to f=zmin+z_span,
+// skipping any level the surface does not rise above.
 module all_slices_z() {
-    dz_base = (numslices<=1) ? x_length : (x_length/(numslices-1));
-    dz_mm = max(0.001, dz_base * slab_pitch_mult);
+    // numslices evenly spaced levels from f=zmin (z=0) to f=zmin+z_span.
+    dz_mm = (numslices<=1) ? max(0.001, z_span_eff*mm_per_unit)
+                           : max(0.001, z_span_eff*mm_per_unit/(numslices-1));
 
     // Keep slabs at exactly slice_thickness.
     slab_t = slice_thickness;
@@ -687,9 +694,11 @@ module all_slices_z() {
     cut_x = x_length + 2*cut_pad;
     cut_y = y_length + 2*cut_pad;
 
-    // Choose how many slabs are needed to reach the top of the surface.
-    // Slab i spans z in [i*dz_mm, i*dz_mm + slab_t].
-    n_slabs = (dz_mm <= 0) ? 1 : max(1, ceil((z_max - slab_t)/dz_mm) + 1);
+    // Slab i spans z in [i*dz_mm, i*dz_mm + slab_t]. A level gets a slab only if the surface
+    // rises at least slab_min_rise above it; e.g. when zmin+z_span is the maximum of f, the
+    // top level only touches the surface at a point or curve and is skipped.
+    slab_min_rise = 0.2; // mm
+    n_slabs = max(1, len([for (i=[0:max(0, numslices-1)]) if (i*dz_mm < z_max - slab_min_rise) i]));
 
     // Top cutoff ensures we end up with exactly n_slabs slabs.
     z_top = (n_slabs<=1) ? 1e9 : ((n_slabs-1)*dz_mm + slab_t);
@@ -706,7 +715,7 @@ module all_slices_z() {
                 }
             }
 
-            // Delete everything above the top slab so there are exactly numslices pieces
+            // Delete everything above the top slab so there are exactly n_slabs pieces
             if (n_slabs>1) {
                 translate([-x_length/2 - cut_pad, -y_length/2 - cut_pad, z_top])
                     cube([cut_x, cut_y, 10000], center=false);
@@ -719,7 +728,6 @@ module all_slices_z() {
     // This avoids columns extending into the deleted gap regions.
     // A slab only counts if the surface rises at least slab_min_rise above its bottom; otherwise
     // the column would grow a hair-thin spike where the surface merely touches a slab boundary.
-    slab_min_rise = 0.2; // mm
     function slab_cap_z(z) =
         (dz_mm <= 0) ? z :
         min(z, max(0, floor((z - slab_min_rise)/dz_mm))*dz_mm + slab_t);
@@ -857,11 +865,11 @@ if (MODE=="slice_x") {
     all_slices_assembled("y");
 } else if (MODE=="all_slices_z") {
     if (z_max <= 0)
-        echo("Surface never rises above z=0; clipped solid will be empty. Change f(x,y).", z_max=z_max);
+        echo("Surface never rises above zmin; clipped solid will be empty. Lower zmin or change f(x,y).", z_max=z_max);
     all_slices_z();
 } else if (MODE=="solid") {
     if (z_max <= 0)
-        echo("Surface never rises above z=0; clipped solid will be empty. Change f(x,y).", z_max=z_max);
+        echo("Surface never rises above zmin; clipped solid will be empty. Lower zmin or change f(x,y).", z_max=z_max);
     solid3D();
 } else {
     echo("Unknown MODE. Use: slice_x | slice_y | stand_x | stand_y | all_slices_x | all_slices_y | all_slices_z | solid");
