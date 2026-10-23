@@ -39,7 +39,7 @@ text_location = 0.5;
 // Uncomment exactly one of these files
 // Use no_presets.scad if you plan to enter your own function and custom parameters below
 //include <no_presets.scad>;
-include <hyperbolic_paraboloid2.scad>;
+include <hyperbolic_paraboloid.scad>;
 //include <elliptic_paraboloid.scad>;
 //include <sombrero.scad>;
 
