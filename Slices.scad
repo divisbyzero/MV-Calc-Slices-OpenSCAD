@@ -37,11 +37,12 @@ text_location = 0.5;
 //////
 
 // Choose the surface. "custom" uses f_user and the custom parameters below.
-SURFACE = "hyperbolic_paraboloid2"; // [custom, hyperbolic_paraboloid, hyperbolic_paraboloid2, elliptic_paraboloid, sombrero]
+SURFACE = "hyperbolic_paraboloid_for_lab"; // [custom, hyperbolic_paraboloid, hyperbolic_paraboloid_for_lab, elliptic_paraboloid, elliptic_paraboloid_for_lab, sombrero]
 
 include <hyperbolic_paraboloid.scad>;
-include <hyperbolic_paraboloid2.scad>;
+include <hyperbolic_paraboloid_for_lab.scad>;
 include <elliptic_paraboloid.scad>;
+include <elliptic_paraboloid_for_lab.scad>;
 include <sombrero.scad>;
 
 // Custom parameters
@@ -119,8 +120,9 @@ solid_ny   = 120;        // surface sampling in Y (higher = smoother, slower)
 params_user = [xmin, ymin, x_span, y_span, column_size_x, column_size_y, column_centers];
 params =
     (SURFACE=="hyperbolic_paraboloid")  ? hyperbolic_paraboloid_params() :
-    (SURFACE=="hyperbolic_paraboloid2") ? hyperbolic_paraboloid2_params() :
+    (SURFACE=="hyperbolic_paraboloid_for_lab") ? hyperbolic_paraboloid_for_lab_params() :
     (SURFACE=="elliptic_paraboloid")    ? elliptic_paraboloid_params() :
+    (SURFACE=="elliptic_paraboloid_for_lab") ? elliptic_paraboloid_for_lab_params() :
     (SURFACE=="sombrero")               ? sombrero_params() :
     params_user;
 
@@ -140,8 +142,9 @@ column_centers_eff = (len(params) > 6) ? params[6] : [];
 // Selected surface function
 function f(x,y) =
     (SURFACE=="hyperbolic_paraboloid")  ? hyperbolic_paraboloid_f(x,y) :
-    (SURFACE=="hyperbolic_paraboloid2") ? hyperbolic_paraboloid2_f(x,y) :
+    (SURFACE=="hyperbolic_paraboloid_for_lab") ? hyperbolic_paraboloid_for_lab_f(x,y) :
     (SURFACE=="elliptic_paraboloid")    ? elliptic_paraboloid_f(x,y) :
+    (SURFACE=="elliptic_paraboloid_for_lab") ? elliptic_paraboloid_for_lab_f(x,y) :
     (SURFACE=="sombrero")               ? sombrero_f(x,y) :
     f_user(x,y);
 

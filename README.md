@@ -34,8 +34,9 @@ Below are examples of 3D models produced with this repository.
 The code contains a few predefined surfaces defined in separate `.scad` files, all included by [Slices.scad](Slices.scad).
 
 - [hyperbolic_paraboloid.scad](hyperbolic_paraboloid.scad)
-- [hyperbolic_paraboloid2.scad](hyperbolic_paraboloid2.scad)
+- [hyperbolic_paraboloid_for_lab.scad](hyperbolic_paraboloid_for_lab.scad)
 - [elliptic_paraboloid.scad](elliptic_paraboloid.scad)
+- [elliptic_paraboloid_for_lab.scad](elliptic_paraboloid_for_lab.scad)
 - [sombrero.scad](sombrero.scad)
 
 Choose one with the `SURFACE` dropdown (in the Customizer, or near the top of [Slices.scad](Slices.scad)). Choose `custom` to use your own function and parameters (`f_user`, `xmin`, `ymin`, `x_span`, `y_span`, and the column settings) in [Slices.scad](Slices.scad).
