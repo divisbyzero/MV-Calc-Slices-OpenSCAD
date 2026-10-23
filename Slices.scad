@@ -18,7 +18,7 @@
 //   "solid" produces the full 3D surface solid
 
 // Choose the type of object to generate
-MODE = "slice_y"; // [slice_x, slice_y, stand_x, stand_y, all_slices_x, all_slices_y, all_slices_z, solid]
+MODE = "solid"; // [slice_x, slice_y, stand_x, stand_y, all_slices_x, all_slices_y, all_slices_z, solid]
 
 // Punch text-shaped holes near the bottom of the slice (MODE="slice_x" or "slice_y")
 show_text = true;
@@ -39,7 +39,8 @@ text_location = 0.5;
 // Uncomment exactly one of these files
 // Use no_presets.scad if you plan to enter your own function and custom parameters below
 //include <no_presets.scad>;
-include <hyperbolic_paraboloid.scad>;
+include <hyperbolic_paraboloid2.scad>;
+//include <hyperbolic_paraboloid.scad>;
 //include <elliptic_paraboloid.scad>;
 //include <sombrero.scad>;
 
