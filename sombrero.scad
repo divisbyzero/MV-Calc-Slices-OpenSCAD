@@ -1,23 +1,18 @@
 // Preset surface: "sombrero" (radial sinc)
 //
-// Load from Slices.scad via:
-//   include <sombrero.scad>;
+// Included by Slices.scad and selected with the SURFACE dropdown ("sombrero").
 //
-// This file sets SOURCE="FROM_FILE" so the include alone selects the preset.
-//
-// Standard preset interface expected by Slices.scad:
-//   - function preset_f(x,y)
-//   - function preset_params() = [xmin, ymin, x_span, y_span, column_size_x, column_size_y, column_centers_mm]
-
-SOURCE = "FROM_FILE";
+// Interface expected by Slices.scad:
+//   - function sombrero_f(x,y)
+//   - function sombrero_params() = [xmin, ymin, x_span, y_span, column_size_x, column_size_y, column_centers_mm]
 
 // Radial sinc (sombrero): 2*sin(r)/r with removable singularity at r=0.
 // OpenSCAD's sin() takes degrees, so we convert radians -> degrees.
-function preset_f(x, y) =
+function sombrero_f(x, y) =
     let(r = sqrt(x*x + y*y))
     6 + 4.5*((r == 0) ? 3 : 3 * sin(r * 180 / PI) / r);
 
-function preset_params() = [
+function sombrero_params() = [
     -12, // xmin
     -12, // ymin
      24, // x_span

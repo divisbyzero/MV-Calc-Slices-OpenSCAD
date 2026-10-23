@@ -31,24 +31,26 @@ Below are examples of 3D models produced with this repository.
 
 ## Preset surfaces
 
-The code contains a few predefined surfaces defined in separate `.scad` files.
+The code contains a few predefined surfaces defined in separate `.scad` files, all included by [Slices.scad](Slices.scad).
 
 - [hyperbolic_paraboloid.scad](hyperbolic_paraboloid.scad)
+- [hyperbolic_paraboloid2.scad](hyperbolic_paraboloid2.scad)
 - [elliptic_paraboloid.scad](elliptic_paraboloid.scad)
 - [sombrero.scad](sombrero.scad)
-- In [Slices.scad](Slices.scad), uncomment exactly one preset `include <...>;` line near the top.
-   - For custom mode, include [no_presets.scad](no_presets.scad)
-   - For a preset surface, include that preset file (e.g. [hyperbolic_paraboloid.scad](hyperbolic_paraboloid.scad))
 
-Preset files use a simple, consistent interface:
+Choose one with the `SURFACE` dropdown (in the Customizer, or near the top of [Slices.scad](Slices.scad)). Choose `custom` to use your own function and parameters (`f_user`, `xmin`, `ymin`, `x_span`, `y_span`, and the column settings) in [Slices.scad](Slices.scad).
+
+Each preset file named `<name>.scad` provides two functions:
 
 ```scad
-function preset_f(x,y) = ...;
+function <name>_f(x,y) = ...;
 // [xmin, ymin, x_span, y_span, column_size_x, column_size_y, column_centers_mm]
-function preset_params() = [ ... ];
+function <name>_params() = [ ... ];
 ```
 
-`preset_f` returns the mathematical height over the domain. Preset functions in
+To add a preset, create a new file with those two functions, `include` it in [Slices.scad](Slices.scad), add its name to the `SURFACE` dropdown, and add it to the `f` and `params` selectors.
+
+`<name>_f` returns the mathematical height over the domain. Preset functions in
 this repository include coefficients that preserve their previous default
 models under uniform XYZ scaling.
 
@@ -80,11 +82,11 @@ Column centers are in the model’s XY coordinates (mm), where the solid is cent
 
 The columns are generated as solids above each rectangular base footprint, under the surface, and capped at the top of the highest remaining horizontal slice (so their tops may be curved, and they will not extend into the deleted gap regions).
 
-When using a preset surface file, the column settings come from that preset file’s `preset_params()` (the last 3 entries).
+When using a preset surface, the column settings come from that preset file’s `<name>_params()` (the last 3 entries).
 
 ## Defining the function
 
-If using custom mode (i.e. [no_presets.scad](no_presets.scad) is included), edit the custom function near the top:
+If using custom mode (`SURFACE = "custom"`), edit the custom function near the top:
 
 ```scad
 function f_user(x,y) = 0.75*(x*x - y*y);
@@ -111,8 +113,8 @@ Consequently, the mathematical function is not independently stretched or
 translated vertically; its units and values determine the shape and height.
 To change its height or vertical position, edit the function itself.
 
-When using a preset surface file, its domain and support-column parameters
-come from that file’s `preset_params()`; the function comes from `preset_f`.
+When using a preset surface, its domain and support-column parameters
+come from that file’s `<name>_params()`; the function comes from `<name>_f`.
 
 The solid/slices then use the clipped height:
 

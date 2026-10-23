@@ -36,16 +36,16 @@ text_location = 0.5;
 // The function and related parameters
 //////
 
-// Uncomment exactly one of these files
-// Use no_presets.scad if you plan to enter your own function and custom parameters below
-//include <no_presets.scad>;
+// Choose the surface. "custom" uses f_user and the custom parameters below.
+SURFACE = "hyperbolic_paraboloid2"; // [custom, hyperbolic_paraboloid, hyperbolic_paraboloid2, elliptic_paraboloid, sombrero]
+
+include <hyperbolic_paraboloid.scad>;
 include <hyperbolic_paraboloid2.scad>;
-//include <hyperbolic_paraboloid.scad>;
-//include <elliptic_paraboloid.scad>;
-//include <sombrero.scad>;
+include <elliptic_paraboloid.scad>;
+include <sombrero.scad>;
 
 // Custom parameters
-// These only apply when using no_presets.scad
+// These only apply when SURFACE = "custom"
 // Custom function. The coefficient preserves the previous default model height
 // while using the same physical scale for X, Y, and Z.
 function f_user(x,y) = (30*2*sqrt(2)/80)*(-x*x-2*y*y+2); // Note: sin_rad, cos_rad, tan_rad are trig functions that accept radians
@@ -111,12 +111,16 @@ solid_ny   = 120;        // surface sampling in Y (higher = smoother, slower)
 ///////////////////////////////////////////////////////////////
 
 
-// Parameter bundle selected by SOURCE.
-// Preset interface:
-//   preset_params() = [xmin, ymin, x_span, y_span,
-//                      column_size_x, column_size_y, column_centers_mm]
+// Parameter bundle selected by SURFACE.
+// Each preset file provides <name>_params() = [xmin, ymin, x_span, y_span,
+//                                              column_size_x, column_size_y, column_centers_mm]
 params_user = [xmin, ymin, x_span, y_span, column_size_x, column_size_y, column_centers_mm];
-params = (SOURCE=="FROM_FILE") ? preset_params() : params_user;
+params =
+    (SURFACE=="hyperbolic_paraboloid")  ? hyperbolic_paraboloid_params() :
+    (SURFACE=="hyperbolic_paraboloid2") ? hyperbolic_paraboloid2_params() :
+    (SURFACE=="elliptic_paraboloid")    ? elliptic_paraboloid_params() :
+    (SURFACE=="sombrero")               ? sombrero_params() :
+    params_user;
 
 // Selected (effective) parameters used by the rest of the file.
 // Domain: [xmin_eff,xmin_eff+x_span_eff] x [ymin_eff,ymin_eff+y_span_eff]
@@ -132,7 +136,12 @@ column_centers_mm_eff = (len(params) > 6) ? params[6] : [];
 
 
 // Selected surface function
-function f(x,y) = (SOURCE=="FROM_FILE") ? preset_f(x,y) : f_user(x,y);
+function f(x,y) =
+    (SURFACE=="hyperbolic_paraboloid")  ? hyperbolic_paraboloid_f(x,y) :
+    (SURFACE=="hyperbolic_paraboloid2") ? hyperbolic_paraboloid2_f(x,y) :
+    (SURFACE=="elliptic_paraboloid")    ? elliptic_paraboloid_f(x,y) :
+    (SURFACE=="sombrero")               ? sombrero_f(x,y) :
+    f_user(x,y);
 
 
 // Stand height is 2*slot_h; slots cut down from the top by slot_h.
