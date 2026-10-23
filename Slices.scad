@@ -714,9 +714,12 @@ module all_slices_z() {
     // Columns: a solid over a rectangular base footprint, under the surface,
     // and capped at the top of the highest *remaining* horizontal slice at each (x,y).
     // This avoids columns extending into the deleted gap regions.
+    // A slab only counts if the surface rises at least slab_min_rise above its bottom; otherwise
+    // the column would grow a hair-thin spike where the surface merely touches a slab boundary.
+    slab_min_rise = 0.2; // mm
     function slab_cap_z(z) =
         (dz_mm <= 0) ? z :
-        min(z, floor(z/dz_mm)*dz_mm + slab_t);
+        min(z, max(0, floor((z - slab_min_rise)/dz_mm))*dz_mm + slab_t);
 
     function column_top_z_at(x_pos, y_pos) =
         let(x_mm = clamp(x_pos + x_length/2, 0, x_length),
