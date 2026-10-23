@@ -4,7 +4,7 @@
 //
 // Interface expected by Slices.scad:
 //   - function sombrero_f(x,y)
-//   - function sombrero_params() = [xmin, ymin, x_span, y_span, column_size_x, column_size_y, column_centers_mm]
+//   - function sombrero_params() = [xmin, ymin, x_span, y_span, column_size_x, column_size_y, column_centers]
 
 // Radial sinc (sombrero): 2*sin(r)/r with removable singularity at r=0.
 // OpenSCAD's sin() takes degrees, so we convert radians -> degrees.
@@ -19,5 +19,5 @@ function sombrero_params() = [
      24, // y_span
      3,  // column_size_x
      3,  // column_size_y
-     []  // column_centers_mm
+     []  // column_centers
 ];

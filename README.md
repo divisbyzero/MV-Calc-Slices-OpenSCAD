@@ -44,7 +44,7 @@ Each preset file named `<name>.scad` provides two functions:
 
 ```scad
 function <name>_f(x,y) = ...;
-// [xmin, ymin, x_span, y_span, column_size_x, column_size_y, column_centers_mm]
+// [xmin, ymin, x_span, y_span, column_size_x, column_size_y, column_centers]
 function <name>_params() = [ ... ];
 ```
 
@@ -76,9 +76,9 @@ If you see a tiny “top remnant” slab, you can nudge the pitch via:
 `MODE="all_slices_z"` also supports vertical columns as built-in support. In [Slices.scad](Slices.scad), set:
 
 - `column_size_x`, `column_size_y` (mm)
-- `column_centers_mm = [[x0,y0], [x1,y1], ...]`
+- `column_centers = [[x0,y0], [x1,y1], ...]`
 
-Column centers are in the model’s XY coordinates (mm), where the solid is centered on the origin.
+Column centers are relative to the object's size, so they follow `x_length`: `[0,0]` is the center, and `-1` or `1` puts a column flush against the corresponding edge (e.g. `[[-1,0],[1,0]]` places columns at the left and right edges).
 
 The columns are generated as solids above each rectangular base footprint, under the surface, and capped at the top of the highest remaining horizontal slice (so their tops may be curved, and they will not extend into the deleted gap regions).
 
@@ -168,7 +168,7 @@ For the horizontal-slab variant use `MODE = "all_slices_z"`:
    - `slice_thickness` (mm) controls individual slab thickness.
    - `slab_pitch_mult` (multiplier for vertical pitch; default `1.0`) nudges the vertical spacing — if you see a tiny top remnant slab, try values slightly above or below `1.0` (e.g. `1.01` or `0.97`).
 4. Optional vertical columns/supports:
-   - Set `column_size_x`, `column_size_y` (mm) and `column_centers_mm = [[x0,y0], ...]` to add rectangular columns under the surface. Columns are capped at the top of the highest remaining slab and will not extend into deleted gap regions.
+   - Set `column_size_x`, `column_size_y` (mm) and `column_centers = [[x0,y0], ...]` (relative positions; see above) to add rectangular columns under the surface. Columns are capped at the top of the highest remaining slab and will not extend into deleted gap regions.
 5. Note: the bottom slab sits on the XY plane (`z=0`). 
 
 Note: Printing the z=constant models can be a challenge. One option is to rotate the model 90° so that the horizontal slices are vertical. Still, many shapes require quite a bit of printing support.

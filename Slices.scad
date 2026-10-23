@@ -60,7 +60,9 @@ y_span     = 2;          // math width in y-direction
 // Column centers are specified in model XY coordinates (mm) where the solid is centered on the origin.
 column_size_x = 3;        // mm - column size in X
 column_size_y = 3;        // mm - column size in Y
-column_centers_mm = [[0,0]];   // list of [x_mm, y_mm] centers; empty => no columns
+// Column centers are relative to the object size: [0,0] is the center, and -1 or 1 puts the column
+// flush against the left/right (x) or front/back (y) edge. Positions scale with x_length.
+column_centers = [[0,0]];   // list of [x_rel, y_rel] centers in [-1,1]; empty => no columns
 // End custom parameters
 // The parameters below will apply to any model
 
@@ -113,8 +115,8 @@ solid_ny   = 120;        // surface sampling in Y (higher = smoother, slower)
 
 // Parameter bundle selected by SURFACE.
 // Each preset file provides <name>_params() = [xmin, ymin, x_span, y_span,
-//                                              column_size_x, column_size_y, column_centers_mm]
-params_user = [xmin, ymin, x_span, y_span, column_size_x, column_size_y, column_centers_mm];
+//                                              column_size_x, column_size_y, column_centers]
+params_user = [xmin, ymin, x_span, y_span, column_size_x, column_size_y, column_centers];
 params =
     (SURFACE=="hyperbolic_paraboloid")  ? hyperbolic_paraboloid_params() :
     (SURFACE=="hyperbolic_paraboloid2") ? hyperbolic_paraboloid2_params() :
@@ -132,7 +134,7 @@ y_span_eff = params[3];
 // Column sizing/placement (effective)
 column_size_x_eff = (len(params) > 4) ? params[4] : 3;
 column_size_y_eff = (len(params) > 5) ? params[5] : 3;
-column_centers_mm_eff = (len(params) > 6) ? params[6] : [];
+column_centers_eff = (len(params) > 6) ? params[6] : [];
 
 
 // Selected surface function
@@ -816,9 +818,12 @@ module all_slices_z() {
     }
 
     module columns_capped(z_height) {
-        if (column_size_x_eff > 0 && column_size_y_eff > 0 && len(column_centers_mm_eff) > 0 && z_height > 0) {
-            for (c = column_centers_mm_eff) {
-                column_capped_under_surface(c[0], c[1], z_height);
+        if (column_size_x_eff > 0 && column_size_y_eff > 0 && len(column_centers_eff) > 0 && z_height > 0) {
+            for (c = column_centers_eff) {
+                // Relative position: +/-1 places the column flush with the object's edge
+                column_capped_under_surface(c[0]*(x_length - column_size_x_eff)/2,
+                                            c[1]*(y_length - column_size_y_eff)/2,
+                                            z_height);
             }
         }
     }
