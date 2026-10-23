@@ -13,7 +13,7 @@ SOURCE = "FROM_FILE";
 
 // Includes the former vertical scale and offset, normalized to preserve the
 // default 80 mm-wide model under uniform XYZ scaling.
-function preset_f(x, y) = 0.75*(1 + (x*x/4 - y*y/2)+5);
+function preset_f(x, y) = -x*x/4 + y*y/2+3;
 
 // Default parameter suggestion for this preset.
 // To use custom values instead, include no_presets.scad in Slices.scad.
