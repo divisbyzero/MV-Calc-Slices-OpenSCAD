@@ -326,9 +326,13 @@ module solid3D(nx=solid_nx, ny=solid_ny) {
                 ]
         ];
 
+        // OpenSCAD expects faces clockwise when viewed from outside; the lists above are
+        // counter-clockwise, so reverse each face. Otherwise the Manifold backend treats
+        // the solid as inside-out and fills the z<0 region with a flat z=0 face.
+        all_faces = concat(top_faces, bot_faces, front_faces, back_faces, left_faces, right_faces);
         polyhedron(
             points = concat(top_pts, bot_pts),
-            faces  = concat(top_faces, bot_faces, front_faces, back_faces, left_faces, right_faces),
+            faces  = [for (f = all_faces) [f[2], f[1], f[0]]],
             convexity = 10
         );
     }
@@ -792,9 +796,11 @@ module all_slices_z() {
                 ]
         ];
 
+        // Reverse winding: OpenSCAD expects faces clockwise when viewed from outside.
+        all_faces = concat(top_faces, bot_faces, front_faces, back_faces, left_faces, right_faces);
         polyhedron(
             points = concat(top_pts, bot_pts),
-            faces  = concat(top_faces, bot_faces, front_faces, back_faces, left_faces, right_faces),
+            faces  = [for (f = all_faces) [f[2], f[1], f[0]]],
             convexity = 10
         );
     }
