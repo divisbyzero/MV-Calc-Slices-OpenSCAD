@@ -6,7 +6,7 @@
 //   - function hyperbolic_paraboloid_for_lab_f(x,y)
 //   - function hyperbolic_paraboloid_for_lab_params() = [xmin, ymin, zmin, x_span, y_span, z_span,column_size_x,column_size_y,column_centers]
 
-function hyperbolic_paraboloid_for_lab_f(x, y) = -x*x/4 + y*y/2+3.5;
+function hyperbolic_paraboloid_for_lab_f(x, y) = -x*x/4 + y*y/2+4.5;
 
 function hyperbolic_paraboloid_for_lab_params() = [
     -3,  // xmin
