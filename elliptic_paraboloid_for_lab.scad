@@ -6,7 +6,7 @@
 //   - function elliptic_paraboloid_for_lab_f(x,y)
 //   - function elliptic_paraboloid_for_lab_params() = [xmin, ymin, zmin, x_span, y_span, z_span, column_size_x, column_size_y, column_centers]
 
-function elliptic_paraboloid_for_lab_f(x, y) = -x*x/2 - y*y + 6;
+function elliptic_paraboloid_for_lab_f(x, y) = -x*x/2 - y*y + 11;
 
 function elliptic_paraboloid_for_lab_params() = [
     -3,  // xmin
